@@ -1,0 +1,30 @@
+# ============================================================================
+# File: backend/pyproject.toml
+# Purpose: Tooling configuration for Black, Ruff, mypy, and pytest.
+# ============================================================================
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "C4", "SIM"]
+ignore = ["S101"]  # allow `assert` in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S"]  # security rules off in tests
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers --cov=app --cov-report=term-missing"
+testpaths = ["tests"]

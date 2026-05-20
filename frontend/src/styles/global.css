@@ -1,0 +1,118 @@
+/* ============================================================================
+   File: frontend/src/styles/global.css
+   Purpose: Minimal, dependency-free design system for the SmartCito UI.
+   The intent is "looks good out of the box" without pulling in a CSS
+   framework. Contributors can swap in Tailwind/Mantine/etc. without
+   touching the component tree.
+   ============================================================================ */
+
+:root {
+  --bg: #0f172a;
+  --bg-elev: #1e293b;
+  --fg: #e2e8f0;
+  --fg-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-strong: #0ea5e9;
+  --error: #f87171;
+  --border: #334155;
+  --radius: 10px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  line-height: 1.5;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0 0.3em;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+/* ----- Layout ----- */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.app-title { margin: 0; font-size: 1.25rem; letter-spacing: 0.02em; }
+.app-nav a { margin-left: 1.25rem; }
+.app-main { flex: 1; padding: 2rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+.app-footer {
+  padding: 1rem 2rem;
+  text-align: center;
+  color: var(--fg-muted);
+  border-top: 1px solid var(--border);
+}
+
+/* ----- Hero ----- */
+.hero h2 { font-size: 2rem; margin-top: 0; }
+.hero-features { padding-left: 1rem; }
+.hero-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  background: transparent;
+}
+.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #0b1220; }
+.btn:hover { text-decoration: none; opacity: 0.9; }
+
+/* ----- Dashboard ----- */
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  margin-top: 1rem;
+}
+.panel {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.panel-header { display: flex; justify-content: space-between; align-items: baseline; }
+.panel h3 { margin: 0 0 0.5rem 0; }
+.muted { color: var(--fg-muted); font-size: 0.875rem; }
+.error { color: var(--error); }
+
+/* ----- Tables ----- */
+.data-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.data-table th { color: var(--fg-muted); font-weight: 500; }
+
+/* ----- Metric list ----- */
+.metric-list { list-style: none; padding: 0; margin: 0.5rem 0 0 0; }
+.metric-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+.metric-key { color: var(--fg-muted); }
