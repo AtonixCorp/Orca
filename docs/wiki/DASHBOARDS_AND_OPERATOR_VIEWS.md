@@ -9,6 +9,10 @@
 
 # Dashboards and Operator Views
 
+<p align="center">
+  <img src="assets/dashboard-views.svg" alt="Dashboard and operator views" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area explains the operator-facing web experience: dashboard panels,

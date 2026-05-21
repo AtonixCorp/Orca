@@ -9,6 +9,10 @@
 
 # Ingestion and Protocol Adapters
 
+<p align="center">
+  <img src="assets/ingestion-protocols.svg" alt="Ingestion and protocol adapters" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area explains how SmartCito receives data from heterogeneous devices and

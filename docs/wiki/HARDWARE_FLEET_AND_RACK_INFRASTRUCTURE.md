@@ -9,6 +9,10 @@
 
 # Hardware Fleet and Rack Infrastructure
 
+<p align="center">
+  <img src="assets/rack-topology.svg" alt="Rack and hardware topology" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area documents the physical deployment model behind SmartCito: controller

@@ -9,6 +9,10 @@
 
 # Storage and Event Backbone
 
+<p align="center">
+  <img src="assets/storage-backbone.svg" alt="Storage and event backbone" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area describes how SmartCito stores relational data, streams events,

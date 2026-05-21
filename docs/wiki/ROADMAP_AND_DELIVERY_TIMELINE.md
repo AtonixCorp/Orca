@@ -9,6 +9,10 @@
 
 # Roadmap and Delivery Timeline
 
+<p align="center">
+  <img src="assets/platform-overview.svg" alt="SmartCito roadmap context" width="100%" />
+</p>
+
 ## What This Page Does
 
 This page turns SmartCito's roadmap into a clear visual sequence so developers,

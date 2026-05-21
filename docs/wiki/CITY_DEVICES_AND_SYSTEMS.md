@@ -9,6 +9,10 @@
 
 # City Devices and Systems
 
+<p align="center">
+  <img src="assets/platform-overview.svg" alt="City devices in the SmartCito platform" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area describes the real-world field inputs that SmartCito expects:

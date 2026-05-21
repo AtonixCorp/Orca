@@ -9,6 +9,10 @@
 
 # SmartEdge API and Control Plane
 
+<p align="center">
+  <img src="assets/api-control-plane.svg" alt="API and control plane flow" width="100%" />
+</p>
+
 ## What This Module Does
 
 The SmartCito control plane exposes APIs, orchestrates secure access, mediates

@@ -9,6 +9,10 @@
 
 # CI/CD and GitFlow Governance
 
+<p align="center">
+  <img src="assets/platform-overview.svg" alt="SmartCito governance overview" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area defines how SmartCito changes move from local development to reviewed

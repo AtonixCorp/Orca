@@ -13,6 +13,9 @@
 > A single entry point for understanding SmartCito as a platform, a codebase,
 > a hardware-aware deployment model, and a contributor ecosystem.
 
+For a GitHub Wiki-ready version of this documentation set, start with
+[wiki/Home.md](wiki/Home.md).
+
 SmartCito aims to become a secure urban operations backbone that connects city
 devices, edge systems, analytics, storage, dashboards, and governance into one
 auditable and scalable platform. This wiki is the visual encyclopedia of that

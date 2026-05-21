@@ -9,6 +9,10 @@
 
 # Quantum-Safe Envelope and OID Wrappers
 
+<p align="center">
+  <img src="assets/security-quantum.svg" alt="Quantum-safe envelope flow" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area documents the quantum-ready abstraction layer in SmartCito, including

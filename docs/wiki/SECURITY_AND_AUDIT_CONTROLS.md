@@ -9,6 +9,10 @@
 
 # Security and Audit Controls
 
+<p align="center">
+  <img src="assets/security-quantum.svg" alt="Security and quantum-safe controls" width="100%" />
+</p>
+
 ## What This Module Does
 
 This area documents the controls that protect SmartCito identities, services,
