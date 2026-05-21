@@ -155,7 +155,7 @@ describe("Dashboard", () => {
 
     expect(screen.getByRole("heading", { name: /Device Manager/i })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /SmartCito 3D Dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /SmartCito Map Integration/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /SmartCito Map/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Security Monitor/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Data Flow View/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Operator Controls/i })).toBeInTheDocument();
