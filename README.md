@@ -259,8 +259,8 @@ disclosure process in [`SECURITY.md`](SECURITY.md).
 
 SmartCito targets compatibility with:
 
-- **GDPR** (EU)
-- **POPIA** (South Africa)
+- **GDPR**
+- **POPIA**
 - **ISO/IEC 27001** practices
 - **NIST Cybersecurity Framework** controls
 
