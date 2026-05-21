@@ -1,0 +1,123 @@
+services:
+  citosmart:
+    environment:
+      SMARTCITO_DEPLOYMENT_MODE: hardware
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - citosmart_data:/app/data
+    networks:
+      - backend
+      - monitoring
+    deploy:
+      resources:
+        reservations:
+          memory: 2G
+        limits:
+          memory: 4G
+
+  webapp:
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+      - backend
+    deploy:
+      resources:
+        reservations:
+          memory: 256M
+        limits:
+          memory: 512M
+
+  postgres:
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pgbackup:/backups
+    networks:
+      - backend
+    deploy:
+      resources:
+        reservations:
+          memory: 2G
+        limits:
+          memory: 4G
+
+  redis:
+    command: ["redis-server", "--appendonly", "yes"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+
+  kafka:
+    networks:
+      - backend
+    volumes:
+      - kafkadata:/bitnami/kafka
+    deploy:
+      resources:
+        reservations:
+          memory: 2G
+        limits:
+          memory: 4G
+
+  mqtt:
+    networks:
+      - backend
+
+  dash:
+    networks:
+      - backend
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: smartcito-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+      - backend
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: smartcito-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  citosmart_data:
+  pgbackup:
+  redisdata:
+  kafkadata:
+  grafana_data:
+
+networks:
+  edge:
+  backend:
+    internal: true
+  monitoring:
+    internal: true

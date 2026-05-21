@@ -1,0 +1,56 @@
+# Hardware Deployment Procedure
+
+Reference implementation steps for a SmartCito pilot or production rack.
+
+## 1. Provision Hardware
+
+- rack controller nodes, compute nodes, storage arrays, switches, and firewalls
+- verify dual PSUs, firmware versions, RAID controllers, and GPU inventory
+- document serials, rack positions, and management IPs
+
+## 2. Cable and Power
+
+- connect dual uplinks per node to separate switches where supported
+- connect redundant A/B power feeds to each device
+- validate out-of-band management access on the management network
+
+## 3. Install Firmware and Base OS
+
+- update BIOS, BMC, RAID, NIC, and GPU firmware
+- apply secure boot where supported
+- harden the host OS and install container runtime + monitoring agents
+
+## 4. Assign Roles
+
+- controller nodes: orchestration, ingress control, dashboards, management
+- compute nodes: analytics, inference, stream processing
+- storage nodes: database, Kafka durability, archive services
+- security appliances: HSM, VPN, IDS/IPS
+
+## 5. Deploy Software
+
+- bootstrap the local software stack with Docker Compose for initial smoke tests
+- apply the hardware overlay with
+  `docker compose -f docker-compose.yml -f docker-compose.hardware.yml up -d --build`
+- move stateful services to dedicated volumes on approved storage tiers
+
+## 6. Validate Data Transmission
+
+- verify camera feeds arrive at ingestion endpoints
+- verify GPS and IoT device streams reach Kafka and MQTT
+- check storage persistence and dashboard visibility
+- confirm audit logs and security alerts are generated
+
+## 7. Secure and Monitor
+
+- enroll HSM-backed keys where available
+- enforce MFA and RBAC per [`../../security/SECURITY_POSTURE.md`](../../security/SECURITY_POSTURE.md)
+- enable Prometheus/Grafana dashboards and IDS alert routing
+
+## Exit Criteria
+
+A site is considered ready only when:
+- all services pass health checks,
+- redundant power and network paths are tested,
+- monitoring and alerting are active,
+- incident response contacts are recorded.

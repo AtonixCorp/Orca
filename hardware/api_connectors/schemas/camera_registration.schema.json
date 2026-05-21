@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartcito.org/schemas/hardware/camera-registration.v1.json",
+  "title": "SmartCito Camera Registration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "device_id",
+    "device_type",
+    "firmware_version",
+    "capabilities",
+    "network",
+    "security"
+  ],
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Stable device identifier burned into the unit or secure element."
+    },
+    "device_type": {
+      "type": "string",
+      "enum": ["body_camera", "micro_camera"]
+    },
+    "firmware_version": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gps", "tamper_detection", "mount_detection", "stream_protocols"],
+      "properties": {
+        "gps": { "type": "boolean" },
+        "tamper_detection": { "type": "boolean" },
+        "mount_detection": { "type": "boolean" },
+        "stream_protocols": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["rtsp", "http2", "webrtc"] },
+          "minItems": 1
+        },
+        "local_encrypted_storage": { "type": "boolean" }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transport", "signal_profile"],
+      "properties": {
+        "transport": {
+          "type": "string",
+          "enum": ["lte", "5g", "wifi6", "ethernet"]
+        },
+        "signal_profile": {
+          "type": "string",
+          "enum": ["mobile", "fixed", "hybrid"]
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_mode", "tls_required", "storage_encryption"],
+      "properties": {
+        "identity_mode": {
+          "type": "string",
+          "enum": ["device_secret", "certificate", "secure_element"]
+        },
+        "tls_required": { "type": "boolean", "const": true },
+        "storage_encryption": {
+          "type": "string",
+          "enum": ["aes-256"]
+        }
+      }
+    },
+    "mounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "magnetic_base": { "type": "boolean" },
+        "mount_sensor_type": {
+          "type": "string",
+          "enum": ["hall_effect", "reed_switch", "none"]
+        }
+      }
+    }
+  }
+}

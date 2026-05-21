@@ -114,6 +114,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full deep dive.
 
 ```
 smartcito/
+├── hardware/             # Reference hardware footprint and deployment runbooks
 ├── citosmart/              # FastAPI service: APIs, ingestion, security, analytics
 │   └── app/
 │       ├── api/v1/       # HTTP endpoints
@@ -126,6 +127,7 @@ smartcito/
 ├── docs/                 # Architecture, API, security and contributor docs
 ├── .github/              # CI workflows, issue and PR templates
 ├── docker-compose.yml    # One-command local stack
+├── docker-compose.hardware.yml # Hardware-aware pilot/on-prem overlay
 ├── .env.example          # Environment variables template
 ├── CONTRIBUTING.md       # How to contribute
 ├── CODE_OF_CONDUCT.md    # Community standards
@@ -184,6 +186,9 @@ npm run dev
 ```
 
 Detailed walkthroughs live in [`docs/`](docs/).
+
+For pilot or hardware-backed deployments, see [`docs/DOCKER_DEPLOYMENT.md`](docs/DOCKER_DEPLOYMENT.md)
+and [`hardware/`](hardware/).
 
 ---
 
