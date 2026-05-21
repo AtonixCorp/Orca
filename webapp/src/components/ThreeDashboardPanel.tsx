@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import type { SceneDevice, SceneOverview } from "@/api/scene";
+import type { SceneOverview } from "@/api/scene";
 
 const canInitializeThree = import.meta.env.MODE !== "test";
 
@@ -22,16 +22,9 @@ const layerLabels = [
   ["threat-waves", "Threat waves"],
 ] as const;
 
-function deviceLabel(device: SceneDevice) {
-  return `${device.name} · ${device.device_type} · trust ${device.trust_score}`;
-}
-
 export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview }) {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const selectedDeviceRef = useRef<SceneDevice | null>(null);
   const [enabledLayers, setEnabledLayers] = useState(() => new Set(scene.layers));
-  const [selectedDevice, setSelectedDevice] = useState<SceneDevice | null>(scene.devices[0] ?? null);
-  selectedDeviceRef.current = selectedDevice;
 
   const visibleDevices = useMemo(
     () => scene.devices.filter((device) => device.trust_score > 80),
@@ -40,7 +33,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
 
   useEffect(() => {
     setEnabledLayers(new Set(scene.layers));
-    setSelectedDevice(scene.devices[0] ?? null);
   }, [scene]);
 
   useEffect(() => {
@@ -98,7 +90,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
       baseGroup.add(building);
     }
 
-    const markerMeshes: THREE.Object3D[] = [];
     visibleDevices.forEach((device) => {
       const markerGeometry = device.device_type === "camera" ? new THREE.ConeGeometry(0.34, 0.9, 4) : new THREE.SphereGeometry(0.36, 24, 16);
       const marker = new THREE.Mesh(
@@ -106,8 +97,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
         new THREE.MeshStandardMaterial({ color: device.status_color, emissive: device.status_color, emissiveIntensity: 0.24 }),
       );
       marker.position.set(device.x, device.y, device.z);
-      marker.userData.deviceId = device.device_id;
-      markerMeshes.push(marker);
       deviceGroup.add(marker);
 
       if (enabledLayers.has("gps-paths") && device.gps_path_3d.length > 1) {
@@ -133,26 +122,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
       wave.position.set(threat.x, threat.y, threat.z);
       threatGroup.add(wave);
     });
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    function handlePointerDown(event: PointerEvent) {
-      const bounds = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-      pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(markerMeshes)[0];
-      if (!hit) {
-        return;
-      }
-      const hitDeviceId = hit.object.userData.deviceId;
-      const nextDevice = visibleDevices.find((device) => device.device_id === hitDeviceId);
-      if (nextDevice) {
-        selectedDeviceRef.current = nextDevice;
-        setSelectedDevice(nextDevice);
-      }
-    }
-    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
     function handleResize() {
       if (!mountRef.current) {
@@ -182,7 +151,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
 
     return () => {
       cancelAnimationFrame(animationFrame);
-      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("resize", handleResize);
       controls.dispose();
       renderer.dispose();
@@ -205,11 +173,7 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
   return (
     <section className="three-dashboard-stage" aria-label="SmartCito 3D control plane">
       <div className="three-stage-copy">
-        <span className="eyebrow">3D control plane</span>
         <h3>SmartCito 3D Dashboard</h3>
-        <p>
-          IoT devices, GPS paths, Raspberry Pi edge nodes, camera objects, and AI threat waves rendered as one authorized city scene.
-        </p>
       </div>
 
       <div className="three-stage-layout">
@@ -225,22 +189,6 @@ export default function ThreeDashboardPanel({ scene }: { scene: SceneOverview })
                 />
                 {label}
               </label>
-            ))}
-          </div>
-          <div className="three-selected-device">
-            <strong>{selectedDevice ? selectedDevice.name : "No selected device"}</strong>
-            {selectedDevice ? (
-              <>
-                <span>{deviceLabel(selectedDevice)}</span>
-                <span>{selectedDevice.camera_feed_url ? "camera overlay ready" : "sensor object"}</span>
-              </>
-            ) : null}
-          </div>
-          <div className="three-scene-list">
-            {visibleDevices.map((device) => (
-              <button type="button" key={device.id} onClick={() => setSelectedDevice(device)}>
-                {deviceLabel(device)}
-              </button>
             ))}
           </div>
         </aside>

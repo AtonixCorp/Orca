@@ -18,7 +18,6 @@ export default function DeviceManagerPanel({ devices }: { devices: ManagedDevice
     <article className="panel panel-wide">
       <header className="panel-header">
         <h3>Device Manager</h3>
-        <span className="muted">usb + cameras + gps</span>
       </header>
 
       <table className="data-table">

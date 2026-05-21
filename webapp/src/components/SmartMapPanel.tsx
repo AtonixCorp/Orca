@@ -137,11 +137,7 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
   return (
     <article className="panel panel-wide smart-map-panel">
       <header className="panel-header map-panel-header">
-        <div>
-          <h3>SmartCito Map Integration</h3>
-          <p className="muted">IoT devices, GPS metadata, map pins, sensor layers, and camera overlays.</p>
-        </div>
-        <span className="status-pill live">verified only</span>
+        <h3>SmartCito Map</h3>
       </header>
 
       <div className="map-layout">
@@ -162,15 +158,6 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
                 />
                 {label}
               </label>
-            ))}
-          </div>
-          <div className="map-device-list">
-            {verifiedDevices.map((device) => (
-              <div className="map-device-card" key={device.id}>
-                <strong>{device.name}</strong>
-                <span>{device.device_type} · trust {device.trust_score}</span>
-                <span>{device.camera_feed_url ? "camera linked" : "sensor only"}</span>
-              </div>
             ))}
           </div>
         </aside>

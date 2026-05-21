@@ -22,7 +22,6 @@ export default function OperatorControlsPanel({
     <article className="panel">
       <header className="panel-header">
         <h3>Operator Controls</h3>
-        <span className="muted">service + policy actions</span>
       </header>
 
       <div className="control-list">
@@ -34,7 +33,6 @@ export default function OperatorControlsPanel({
               <div>
                 <strong>{control.name}</strong>
                 <p className="muted">{control.description}</p>
-                <p className="muted">policy: {control.policy_mode}</p>
               </div>
               <div className="control-actions">
                 <span className={`status-pill ${control.state === "running" ? "live" : control.state === "degraded" ? "degraded" : "connecting"}`}>

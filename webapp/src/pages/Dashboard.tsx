@@ -49,9 +49,6 @@ export default function Dashboard() {
   return (
     <section className="dashboard">
       <h2>Operations Dashboard</h2>
-      <p className="muted">
-        Live view of the SmartCito backbone. Data refreshes automatically.
-      </p>
 
       <Suspense fallback={<div className="three-stage-loading">Loading 3D control plane...</div>}>
         <ThreeDashboardPanel scene={scene} />

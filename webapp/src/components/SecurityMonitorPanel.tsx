@@ -14,7 +14,6 @@ export default function SecurityMonitorPanel({ security }: { security: SecurityM
     <article className="panel">
       <header className="panel-header">
         <h3>Security Monitor</h3>
-        <span className="muted">trust + audit</span>
       </header>
 
       <ul className="metric-list">

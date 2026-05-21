@@ -14,7 +14,6 @@ export default function DataFlowViewPanel({ stages }: { stages: DataFlowStage[] 
     <article className="panel panel-wide">
       <header className="panel-header">
         <h3>Data Flow View</h3>
-        <span className="muted">kafka + storage + dashboard</span>
       </header>
 
       <div className="pipeline-grid">
@@ -24,9 +23,7 @@ export default function DataFlowViewPanel({ stages }: { stages: DataFlowStage[] 
               {stage.state}
             </span>
             <h4>{stage.name}</h4>
-            <p className="muted">{stage.protocol}</p>
             <p>{stage.throughput_hint}</p>
-            <p className="muted">to {stage.destination}</p>
           </div>
         ))}
       </div>
