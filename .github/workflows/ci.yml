@@ -11,13 +11,19 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - release/**
+      - hotfix/**
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - develop
 
 jobs:
   citosmart:
-    name: Citosmart (FastAPI)
+    name: Unit Tests and Quality (citosmart)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,7 +55,7 @@ jobs:
         run: pytest
 
   webapp:
-    name: Webapp (React)
+    name: Unit Tests and Quality (webapp)
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -96,11 +96,24 @@ docker compose up --build
 
 ## Branching & Commit Style
 
-- Branch off `main`:
-  - `feat/<short-description>` for features
-  - `fix/<short-description>` for bug fixes
-  - `docs/<short-description>` for documentation
-  - `chore/<short-description>` for tooling
+- SmartCito follows GitFlow:
+  - `main` stays production-ready.
+  - `develop` is the integration branch for active feature work.
+  - `feature/<module-name>` branches start from `develop` and merge back into `develop`.
+  - `release/<version>` branches start from `develop` and merge into both `main` and `develop`.
+  - `hotfix/<name>` branches start from `main` and merge into both `main` and `develop`.
+- Pull the latest `develop` before feature work:
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/<module-name>
+```
+
+- Branch names are enforced in CI for pull requests:
+  - `feature/*` can only target `develop`
+  - `release/*` can target `main` or `develop`
+  - `hotfix/*` can target `main` or `develop`
 - Commits follow **[Conventional Commits](https://www.conventionalcommits.org/)**:
   - `feat(api): add traffic ingestion endpoint`
   - `fix(webapp): correct sensor map zoom`
@@ -112,13 +125,16 @@ Conventional commits power our automated changelog.
 
 ## Pull Request Process
 
-1. Fork → branch → commit → push → open PR against `main`.
+1. Fork → branch → commit → push → open a PR against the correct GitFlow base branch.
 2. Fill out the PR template — describe **what**, **why**, and **how tested**.
-3. Ensure CI is green (lint, type check, tests).
-4. At least **one maintainer review** is required.
-5. Squash-merge is the default strategy.
+3. Ensure CI is green for tests, security, and Kubernetes/container checks.
+4. Security checklist sign-off is required on every PR.
+5. At least **two maintainer approvals** are required before merge.
+6. Squash-merge into `develop`; only release or hotfix flows should land in `main`.
 
 PRs should be **small and focused**. Split large changes into a series.
+
+See [`docs/GITFLOW.md`](docs/GITFLOW.md) for the branch map and release flow.
 
 ---
 

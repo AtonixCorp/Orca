@@ -1,0 +1,61 @@
+# ============================================================================
+# File: .github/workflows/gitflow.yml
+# Purpose:
+#   Enforce GitFlow branch naming and PR target rules.
+# ============================================================================
+
+name: GitFlow
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - develop
+      - feature/**
+      - release/**
+      - hotfix/**
+
+jobs:
+  branch-policy:
+    name: GitFlow branch policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pull request flow
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const base = context.payload.pull_request.base.ref;
+            const head = context.payload.pull_request.head.ref;
+
+            const rules = [
+              { prefix: 'feature/', allowed: ['develop'] },
+              { prefix: 'release/', allowed: ['main', 'develop'] },
+              { prefix: 'hotfix/', allowed: ['main', 'develop'] },
+            ];
+
+            const match = rules.find((rule) => head.startsWith(rule.prefix));
+            if (!match) {
+              core.setFailed(`Unsupported branch name '${head}'. Use feature/*, release/*, or hotfix/*.`);
+              return;
+            }
+
+            if (!match.allowed.includes(base)) {
+              core.setFailed(`Branch '${head}' cannot target '${base}'. Allowed targets: ${match.allowed.join(', ')}`);
+            }
+
+      - name: Validate push branch naming
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.ref.replace('refs/heads/', '');
+            const allowed = ['develop'];
+            const prefixes = ['feature/', 'release/', 'hotfix/'];
+            const valid = allowed.includes(ref) || prefixes.some((prefix) => ref.startsWith(prefix));
+            if (!valid) {
+              core.setFailed(`Branch '${ref}' does not follow SmartCito GitFlow naming.`);
+            }

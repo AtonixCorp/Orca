@@ -1,0 +1,12 @@
+# ============================================================================
+# File: .github/CODEOWNERS
+# Purpose:
+#   Require review coverage for SmartCito's critical areas.
+# ============================================================================
+
+* @atonixdev
+/citosmart/ @atonixdev
+/webapp/ @atonixdev
+/security/ @atonixdev
+/infra/ @atonixdev
+/.github/ @atonixdev

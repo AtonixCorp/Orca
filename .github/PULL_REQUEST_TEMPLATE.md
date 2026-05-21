@@ -9,6 +9,10 @@
 
 <!-- Brief description of the change. -->
 
+## Target Branch
+
+<!-- develop, main, release/*, or hotfix/* according to GitFlow. -->
+
 ## Why
 
 <!-- Motivation, linked issue, screenshots if UI. -->
@@ -18,11 +22,13 @@ Closes #
 
 - [ ] Unit tests added / updated
 - [ ] Manually verified locally
+- [ ] `docker compose` stack validated locally
 - [ ] Updated documentation if applicable
 
 ## Checklist
 
 - [ ] Conventional Commit title (e.g. `feat(api): ...`)
 - [ ] New files include the standard documentation header
-- [ ] CI passes (lint, types, tests)
+- [ ] CI passes (tests, security, containers)
+- [ ] Security checklist reviewed
 - [ ] No secrets committed

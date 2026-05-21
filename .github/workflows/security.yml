@@ -2,11 +2,36 @@ name: Security
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - release/**
+      - hotfix/**
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - develop
 
 jobs:
+  pr-checklist:
+    name: Security checklist sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR checklist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || "";
+            const required = [
+              /- \[x\] Security checklist reviewed/i,
+              /- \[x\] CI passes \(tests, security, containers\)/i,
+            ];
+            const missing = required.filter((pattern) => !pattern.test(body));
+            if (missing.length > 0) {
+              core.setFailed("PR template must include checked security sign-off and CI gate confirmation.");
+            }
+
   security-backend:
     name: Security checks (backend)
     runs-on: ubuntu-latest
@@ -69,7 +94,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   containers:
-    name: Container scan
+    name: Container build and manifest checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,3 +113,36 @@ jobs:
 
       - name: Trivy scan - webapp Dockerfile
         run: trivy config --exit-code 1 --severity HIGH,CRITICAL webapp/Dockerfile
+
+      - name: Trivy scan - domain Dockerfiles
+        run: |
+          trivy config --exit-code 1 --severity HIGH,CRITICAL camera_module/Dockerfile
+          trivy config --exit-code 1 --severity HIGH,CRITICAL gps_module/Dockerfile
+          trivy config --exit-code 1 --severity HIGH,CRITICAL ai_models/Dockerfile
+          trivy config --exit-code 1 --severity HIGH,CRITICAL security/Dockerfile
+          trivy config --exit-code 1 --severity HIGH,CRITICAL hardware/Dockerfile
+
+      - name: Trivy scan - security configuration
+        run: trivy config --exit-code 1 --severity HIGH,CRITICAL security
+
+      - name: Install manifest validation dependency
+        run: python3 -m pip install --user PyYAML
+
+      - name: Validate Kubernetes manifests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          manifest_dir = Path("infra/kubernetes")
+          yaml_files = sorted(manifest_dir.glob("*.yaml"))
+          if not yaml_files:
+              raise SystemExit("No Kubernetes manifests found in infra/kubernetes")
+
+          for manifest in yaml_files:
+              documents = list(yaml.safe_load_all(manifest.read_text()))
+              if not documents:
+                  raise SystemExit(f"{manifest} is empty")
+
+          print(f"Validated {len(yaml_files)} Kubernetes manifest files")
+          PY
