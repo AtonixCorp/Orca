@@ -24,11 +24,27 @@ import { demoSceneOverview, useSceneOverview } from "@/api/scene";
 
 const ThreeDashboardPanel = lazy(() => import("@/components/ThreeDashboardPanel"));
 
+function hasVisibleMapDevices(devices: typeof demoSmartMapDevices | undefined) {
+  return Boolean(devices?.some((device) => device.trust_score > 80));
+}
+
+function hasVisibleSceneDevices(sceneData: typeof demoSceneOverview | undefined) {
+  return Boolean(sceneData?.devices.some((device) => device.trust_score > 80));
+}
+
 export default function Dashboard() {
   const { data } = useControlPlaneOverview();
   const { data: mapData } = useSmartMapOverview();
   const { data: sceneData } = useSceneOverview();
   const updateControl = useUpdateOperatorControl();
+  const mapDevices = hasVisibleMapDevices(mapData?.devices) ? mapData!.devices : demoSmartMapDevices;
+  const scene = hasVisibleSceneDevices(sceneData)
+    ? {
+        ...sceneData!,
+        threats: sceneData!.threats.length > 0 ? sceneData!.threats : demoSceneOverview.threats,
+        layers: sceneData!.layers.length > 0 ? sceneData!.layers : demoSceneOverview.layers,
+      }
+    : demoSceneOverview;
 
   return (
     <section className="dashboard">
@@ -38,11 +54,11 @@ export default function Dashboard() {
       </p>
 
       <Suspense fallback={<div className="three-stage-loading">Loading 3D control plane...</div>}>
-        <ThreeDashboardPanel scene={sceneData ?? demoSceneOverview} />
+        <ThreeDashboardPanel scene={scene} />
       </Suspense>
 
       <div className="dashboard-grid">
-        <SmartMapPanel devices={mapData?.devices ?? demoSmartMapDevices} />
+        <SmartMapPanel devices={mapDevices} />
         <DeviceManagerPanel devices={data?.devices ?? []} />
         <RegisteredCamerasPanel />
         <SecurityMonitorPanel
