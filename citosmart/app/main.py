@@ -35,8 +35,9 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
-from starlette.responses import JSONResponse, HTMLResponse
+from starlette.responses import HTMLResponse, JSONResponse
 
+from app.api.v1.router import api_router
 from app.api.v1.endpoints.platform import router as platform_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging

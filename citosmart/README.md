@@ -99,3 +99,23 @@ Every new file MUST begin with a documentation header (see existing files).
 Frontend layout, typography, theme, and component-quality rules live in
 [`../webapp/README.md`](../webapp/README.md). Backend API changes that affect
 the dashboard should preserve those frontend contracts and typed data shapes.
+
+## Run The FastAPI Backend
+
+Do not use Django's `manage.py runserver` for SmartCito API development.
+
+Use:
+
+```bash
+cd /home/atonixdev/smartcito/citosmart
+source .venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000/
+http://localhost:8000/docs
+http://localhost:8000/api/v1/health/live
+```
