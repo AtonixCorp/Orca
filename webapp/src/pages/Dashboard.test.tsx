@@ -32,7 +32,7 @@ describe("Dashboard", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: /SmartCito Operations Dashboard/i }),
+      screen.getByRole("heading", { name: /SmartCito Operations Visualization/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /Sovereign Location Intelligence/i }),

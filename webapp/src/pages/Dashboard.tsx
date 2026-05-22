@@ -13,7 +13,16 @@ import RecentReadingsPanel from "@/components/RecentReadingsPanel";
 
 export default function Dashboard() {
   return (
-    <section className="dashboard">
+    <section className="dashboard operations-dashboard">
+      <header className="operations-dashboard-header">
+        <span className="eyebrow">SmartCito Operations</span>
+        <h2>SmartCito Operations Visualization</h2>
+        <p>
+          Map Visualization — city zones, roads, regions, GPS, weather, devices,
+          and risk areas.
+        </p>
+      </header>
+
       <div className="dashboard-grid">
         <LocationIntelligencePanel />
         <OperationsVisualizationPanel />
