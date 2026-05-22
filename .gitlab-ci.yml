@@ -1,17 +1,202 @@
-image: node:20
+image: node:20-bookworm
 
 stages:
+  - prepare
+  - build
+  - test
+  - scan
+  - package
   - deploy
+  - audit
 
-pages:
-  stage: deploy
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  REQUIRED_MODULES: "ai iot gps camera map security crypto containers openstack debian tests k8s docs"
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+
+prepare:validate-repository:
+  stage: prepare
   script:
-    - npm ci
-    - npm run build
-    - rm -rf public
-    - cp -r dist public
+    - apt-get update && apt-get install -y yamllint jq
+    - yamllint .gitlab-ci.yml
+    - |
+      for dir in $REQUIRED_MODULES; do
+        test -d "$dir" || { echo "Missing required folder: $dir"; exit 1; }
+      done
+    - |
+      for dir in ai iot gps camera map security crypto; do
+        test -f "$dir/README.md" || { echo "Missing $dir/README.md"; exit 1; }
+        test -d "$dir/tests" || { echo "Missing $dir/tests"; exit 1; }
+        test -f "$dir/Dockerfile" -o -f "$dir/Containerfile" || { echo "Missing $dir Dockerfile/Containerfile"; exit 1; }
+        test -f "$dir/SECURITY.md" || { echo "Missing $dir/SECURITY.md"; exit 1; }
+      done
+
+prepare:dependencies:
+  stage: prepare
+  script:
+    - |
+      if [ -f package-lock.json ]; then
+        npm ci
+      elif [ -f package.json ]; then
+        npm install
+      else
+        echo "No root package.json found; skipping npm install"
+      fi
   artifacts:
     paths:
-      - public
-  only:
-    - main
+      - node_modules/
+    expire_in: 1 hour
+    when: on_success
+
+build:containers:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  script:
+    - |
+      for dir in ai iot gps camera map security crypto containers; do
+        file=""
+        [ -f "$dir/Dockerfile" ] && file="$dir/Dockerfile"
+        [ -f "$dir/Containerfile" ] && file="$dir/Containerfile"
+
+        if [ -n "$file" ]; then
+          echo "Building $dir from $file"
+          docker build --pull -f "$file" -t "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA" "$dir"
+        else
+          echo "No container file in $dir"
+          exit 1
+        fi
+      done
+
+test:modules:
+  stage: test
+  script:
+    - |
+      for dir in ai iot gps camera map security crypto; do
+        echo "Testing $dir"
+
+        if [ -f "$dir/package.json" ]; then
+          cd "$dir"
+          npm install
+          npm test
+          cd -
+        elif find "$dir/tests" -type f | grep -q .; then
+          echo "Tests exist for $dir, but no runner was detected"
+        else
+          echo "No tests found for $dir"
+          exit 1
+        fi
+      done
+
+test:dashboard-build:
+  stage: test
+  script:
+    - |
+      if [ -f package.json ]; then
+        npm run build --if-present
+        npm test --if-present
+      else
+        echo "No dashboard package.json found; skipping dashboard build"
+      fi
+
+scan:crypto-checks:
+  stage: scan
+  script:
+    - |
+      grep -RInE "md5|sha1|des|rc4|ecb" crypto security && {
+        echo "Weak cryptography pattern detected"
+        exit 1
+      } || echo "Cryptography scan passed"
+
+scan:container-policy:
+  stage: scan
+  script:
+    - |
+      for file in $(find ai iot gps camera map security crypto containers -name Dockerfile -o -name Containerfile); do
+        grep -Eiq "^FROM .*(debian|bookworm|bullseye|trixie)" "$file" || {
+          echo "$file is not Debian-based"
+          exit 1
+        }
+      done
+
+scan:dast:
+  stage: scan
+  script:
+    - |
+      if [ -z "$DAST_TARGET_URL" ]; then
+        echo "Set DAST_TARGET_URL to enable DAST scanning"
+        exit 1
+      fi
+      echo "DAST target: $DAST_TARGET_URL"
+  allow_failure: false
+
+package:push-images:
+  stage: package
+  image: docker:27
+  services:
+    - docker:27-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    - |
+      for dir in ai iot gps camera map security crypto containers; do
+        file=""
+        [ -f "$dir/Dockerfile" ] && file="$dir/Dockerfile"
+        [ -f "$dir/Containerfile" ] && file="$dir/Containerfile"
+
+        docker build --pull -f "$file" -t "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA" -t "$CI_REGISTRY_IMAGE/$dir:latest" "$dir"
+        docker push "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA"
+        docker push "$CI_REGISTRY_IMAGE/$dir:latest"
+      done
+
+deploy:kubernetes:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - test -n "$KUBE_CONFIG" || { echo "Missing KUBE_CONFIG variable"; exit 1; }
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+    - kubectl apply -f k8s/
+
+deploy:openstack:
+  stage: deploy
+  image: debian:bookworm
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - apt-get update && apt-get install -y python3-pip
+    - pip3 install --break-system-packages python-openstackclient
+    - test -n "$OS_AUTH_URL" || { echo "Missing OpenStack environment variables"; exit 1; }
+    - openstack server list
+
+audit:atp-ledger:
+  stage: audit
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - mkdir -p audit
+    - |
+      cat > audit/atp-ledger-${CI_COMMIT_SHA}.json <<EOF
+      {
+        "project": "$CI_PROJECT_PATH",
+        "commit": "$CI_COMMIT_SHA",
+        "branch": "$CI_COMMIT_BRANCH",
+        "author": "$GITLAB_USER_LOGIN",
+        "pipeline": "$CI_PIPELINE_ID",
+        "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+        "registry": "$CI_REGISTRY_IMAGE"
+      }
+      EOF
+    - cat audit/atp-ledger-${CI_COMMIT_SHA}.json
+  artifacts:
+    paths:
+      - audit/
+    expire_in: 1 year
