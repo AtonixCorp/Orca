@@ -2,27 +2,42 @@
  * ============================================================================
  * File: webapp/src/components/SmartMapPanel.tsx
  * Purpose:
- *   Leaflet-powered dashboard map for IoT -> GPS -> Map -> Camera flow.
+ *   Dependency-free dashboard map for IoT -> GPS -> Map -> Camera flow.
  * ============================================================================
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useMemo, useState } from "react";
 
 import type { SmartMapDevice } from "@/api/map";
-
-const mapCenter: [number, number] = [-25.7479, 28.2293];
-const canInitializeLeaflet = import.meta.env.MODE !== "test";
 
 function layerAllows(layer: string, enabledLayers: Set<string>) {
   return enabledLayers.has(layer);
 }
 
+function buildProjector(devices: SmartMapDevice[]) {
+  const latitudes = devices.flatMap((device) => [
+    device.latitude,
+    ...device.gps_path.map(([lat]) => lat),
+  ]);
+  const longitudes = devices.flatMap((device) => [
+    device.longitude,
+    ...device.gps_path.map(([, lon]) => lon),
+  ]);
+
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLon = Math.min(...longitudes);
+  const maxLon = Math.max(...longitudes);
+  const latSpan = Math.max(maxLat - minLat, 0.001);
+  const lonSpan = Math.max(maxLon - minLon, 0.001);
+
+  return (latitude: number, longitude: number) => ({
+    x: 8 + ((longitude - minLon) / lonSpan) * 84,
+    y: 92 - ((latitude - minLat) / latSpan) * 84,
+  });
+}
+
 export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }) {
-  const mapRef = useRef<L.Map | null>(null);
-  const mapElementRef = useRef<HTMLDivElement | null>(null);
-  const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const [enabledLayers, setEnabledLayers] = useState(
     () => new Set(["devices", "cameras", "paths", "heatmap"]),
   );
@@ -32,95 +47,10 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
     [devices],
   );
 
-  useEffect(() => {
-    if (!canInitializeLeaflet) {
-      return;
-    }
-
-    if (!mapElementRef.current || mapRef.current) {
-      return;
-    }
-
-    mapRef.current = L.map(mapElementRef.current, {
-      zoomControl: true,
-      attributionControl: false,
-    }).setView(mapCenter, 11);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(mapRef.current);
-
-    layerGroupRef.current = L.layerGroup().addTo(mapRef.current);
-  }, []);
-
-  useEffect(() => {
-    if (!canInitializeLeaflet) {
-      return;
-    }
-
-    const group = layerGroupRef.current;
-    if (!group) {
-      return;
-    }
-
-    group.clearLayers();
-
-    verifiedDevices.forEach((device) => {
-      if (layerAllows("paths", enabledLayers) && device.gps_path.length > 1) {
-        L.polyline(device.gps_path, {
-          color: "#57c7d4",
-          weight: 3,
-          opacity: 0.75,
-        }).addTo(group);
-      }
-
-      if (layerAllows("heatmap", enabledLayers)) {
-        L.circle([device.latitude, device.longitude], {
-          radius: 420 + (device.sensor_value ?? 0.5) * 460,
-          color: "#f1c96b",
-          fillColor: "#f1c96b",
-          fillOpacity: 0.14,
-          weight: 1,
-        }).addTo(group);
-      }
-
-      if (!layerAllows("devices", enabledLayers)) {
-        return;
-      }
-
-      const hasCamera = Boolean(device.camera_feed_url);
-      if (device.device_type === "camera" && !layerAllows("cameras", enabledLayers)) {
-        return;
-      }
-
-      const icon = L.divIcon({
-        className: "smart-map-pin",
-        html: `<span>${device.device_type.toUpperCase()}</span>`,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
-      });
-
-      const cameraMarkup = hasCamera
-        ? `<a href="${device.camera_feed_url}" target="_blank" rel="noreferrer">Open camera feed</a>`
-        : "<span>No camera feed linked</span>";
-
-      L.marker([device.latitude, device.longitude], { icon })
-        .bindPopup(
-          `<strong>${device.name}</strong><br/>` +
-            `Trust score: ${device.trust_score}<br/>` +
-            `Sensor: ${device.sensor_type}<br/>` +
-            cameraMarkup,
-        )
-        .addTo(group);
-    });
-
-    if (verifiedDevices.length > 0 && mapRef.current) {
-      const bounds = L.latLngBounds(
-        verifiedDevices.map((device) => [device.latitude, device.longitude]),
-      );
-      mapRef.current.fitBounds(bounds.pad(0.25), { maxZoom: 13 });
-    }
-  }, [enabledLayers, verifiedDevices]);
+  const project = useMemo(
+    () => buildProjector(verifiedDevices.length > 0 ? verifiedDevices : devices),
+    [devices, verifiedDevices],
+  );
 
   function toggleLayer(layer: string) {
     setEnabledLayers((current) => {
@@ -137,11 +67,93 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
   return (
     <article className="panel panel-wide smart-map-panel">
       <header className="panel-header map-panel-header">
-        <h3>SmartCito Map</h3>
+        <div>
+          <h3>SmartCito Map</h3>
+          <p className="muted">
+            Verified devices only · GPS paths · camera overlays · sensor heatmap
+          </p>
+        </div>
       </header>
 
       <div className="map-layout">
-        <div ref={mapElementRef} className="smart-map" aria-label="SmartCito verified device map" />
+        <div className="smart-map css-smart-map" aria-label="SmartCito verified device map">
+          <div className="scene-grid" />
+          <div className="scene-line line-a" />
+          <div className="scene-line line-b" />
+          <div className="scene-line line-c" />
+
+          {layerAllows("paths", enabledLayers) && (
+            <svg className="css-map-paths" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {verifiedDevices.map((device) => {
+                if (device.gps_path.length < 2) return null;
+                const points = device.gps_path
+                  .map(([lat, lon]) => {
+                    const point = project(lat, lon);
+                    return `${point.x},${point.y}`;
+                  })
+                  .join(" ");
+
+                return (
+                  <polyline
+                    key={`${device.id}-path`}
+                    points={points}
+                    fill="none"
+                    stroke="#57c7d4"
+                    strokeWidth="0.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.9"
+                  />
+                );
+              })}
+            </svg>
+          )}
+
+          {verifiedDevices.map((device) => {
+            const point = project(device.latitude, device.longitude);
+            const hasCamera = Boolean(device.camera_feed_url);
+
+            if (device.device_type === "camera" && !layerAllows("cameras", enabledLayers)) {
+              return null;
+            }
+
+            return (
+              <div key={device.id}>
+                {layerAllows("heatmap", enabledLayers) && (
+                  <span
+                    className="css-map-heat"
+                    style={{
+                      left: `${point.x}%`,
+                      top: `${point.y}%`,
+                      width: `${56 + (device.sensor_value ?? 0.5) * 60}px`,
+                      height: `${56 + (device.sensor_value ?? 0.5) * 60}px`,
+                    }}
+                  />
+                )}
+
+                {layerAllows("devices", enabledLayers) && (
+                  <button
+                    className={`smart-map-pin css-map-pin ${device.device_type}`}
+                    style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                    title={`${device.name} · trust ${device.trust_score}`}
+                  >
+                    <span>{device.device_type.toUpperCase()}</span>
+                  </button>
+                )}
+
+                {hasCamera && layerAllows("cameras", enabledLayers) && (
+                  <span
+                    className="css-camera-badge"
+                    style={{ left: `${point.x}%`, top: `${point.y + 6}%` }}
+                  >
+                    CAM
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         <aside className="map-sidebar">
           <div className="map-layer-controls" aria-label="Map layer controls">
             {[
@@ -158,6 +170,16 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
                 />
                 {label}
               </label>
+            ))}
+          </div>
+
+          <div className="map-device-list">
+            {verifiedDevices.map((device) => (
+              <div className="map-device-card" key={device.id}>
+                <strong>{device.name}</strong>
+                <span>{device.device_type} · trust {device.trust_score}</span>
+                <span>{device.latitude.toFixed(4)}, {device.longitude.toFixed(4)}</span>
+              </div>
             ))}
           </div>
         </aside>

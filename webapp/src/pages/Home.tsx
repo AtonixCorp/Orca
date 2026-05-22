@@ -2,19 +2,12 @@
  * ============================================================================
  * File: webapp/src/pages/Home.tsx
  * Purpose:
- *   Landing page describing what SmartCito is and verifying frontend-to-backend
- *   API communication.
+ *   Landing page describing what SmartCito is and its platform capabilities.
  * ============================================================================
  */
 
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-<<<<<<< HEAD
-type ApiStatus = "checking" | "online" | "offline";
-
-const BACKEND_ENABLED = import.meta.env.VITE_ENABLE_BACKEND === "true";
-=======
 const coreFeatures = [
   {
     title: "Camera Integration",
@@ -59,31 +52,8 @@ const architectureLayers = [
   "Security and audit controls",
   "SmartEdge dashboard",
 ];
->>>>>>> ea3017204e60172cfb4e16dd253e4f0dcb8566a1
 
 export default function Home() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>(
-    BACKEND_ENABLED ? "checking" : "offline",
-  );
-
-  useEffect(() => {
-    if (!BACKEND_ENABLED) {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    fetch("/api/v1/health/live", { signal: controller.signal })
-      .then((response) => {
-        setApiStatus(response.ok ? "online" : "offline");
-      })
-      .catch(() => {
-        setApiStatus("offline");
-      });
-
-    return () => controller.abort();
-  }, []);
-
   return (
     <div className="home-page">
       <section className="landing-hero">
@@ -97,27 +67,11 @@ export default function Home() {
             backbone designed for transparency, security, and innovation.
           </p>
 
-<<<<<<< HEAD
-      <div className={`api-status ${apiStatus}`}>
-        <strong>Backend API:</strong>{" "}
-        {apiStatus === "checking" && "Checking connection…"}
-        {apiStatus === "online" && "Connected"}
-        {apiStatus === "offline" && "Offline — start citosmart backend"}
-      </div>
-
-      <ul className="hero-features">
-        <li>🛰️ Unified ingestion (MQTT, Kafka, HTTP)</li>
-        <li>🔐 Built-in RBAC, JWT, TLS, audit logs</li>
-        <li>📊 Live dashboards for traffic, air quality, energy</li>
-        <li>🌍 Apache 2.0 — open governance, open contributions</li>
-      </ul>
-=======
           <div className="foundation-strip" aria-label="Project positioning">
             <span>Open foundation ambition</span>
             <span>Security-first engineering</span>
             <span>City-scale control plane</span>
           </div>
->>>>>>> ea3017204e60172cfb4e16dd253e4f0dcb8566a1
 
           <div className="hero-actions">
             <Link className="btn primary" to="/dashboard">

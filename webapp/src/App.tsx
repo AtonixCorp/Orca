@@ -16,11 +16,7 @@ import Community from "./pages/Community";
 import Dashboard from "./pages/Dashboard";
 import Mission from "./pages/Mission";
 import NotFound from "./pages/NotFound";
-<<<<<<< HEAD
-import BackendConnectionPanel from "@/components/BackendConnectionPanel";
-=======
 import Roadmap from "./pages/Roadmap";
->>>>>>> ea3017204e60172cfb4e16dd253e4f0dcb8566a1
 
 export default function App() {
   return (

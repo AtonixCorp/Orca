@@ -2,9 +2,7 @@
  * ============================================================================
  * File: webapp/src/pages/Dashboard.tsx
  * Purpose:
- *   Operator dashboard. Composes domain panels (recent readings, traffic
- *   summary) into a responsive grid. Each panel manages its own data
- *   fetching via React Query hooks.
+ *   Operator dashboard. Composes domain panels into a responsive grid.
  * ============================================================================
  */
 
@@ -18,10 +16,6 @@ import RegisteredCamerasPanel from "@/components/RegisteredCamerasPanel";
 import SecurityMonitorPanel from "@/components/SecurityMonitorPanel";
 import SmartMapPanel from "@/components/SmartMapPanel";
 import TrafficSummaryPanel from "@/components/TrafficSummaryPanel";
-<<<<<<< HEAD
-import OperationsVisualizationPanel from "@/components/OperationsVisualizationPanel";
-import LocationIntelligencePanel from "@/components/LocationIntelligencePanel";
-=======
 import { useControlPlaneOverview, useUpdateOperatorControl } from "@/api/controlPlane";
 import { demoSmartMapDevices, useSmartMapOverview } from "@/api/map";
 import { demoSceneOverview, useSceneOverview } from "@/api/scene";
@@ -35,7 +29,6 @@ function hasVisibleMapDevices(devices: typeof demoSmartMapDevices | undefined) {
 function hasVisibleSceneDevices(sceneData: typeof demoSceneOverview | undefined) {
   return Boolean(sceneData?.devices.some((device) => device.trust_score > 80));
 }
->>>>>>> ea3017204e60172cfb4e16dd253e4f0dcb8566a1
 
 export default function Dashboard() {
   const { data } = useControlPlaneOverview();
@@ -60,13 +53,8 @@ export default function Dashboard() {
       </Suspense>
 
       <div className="dashboard-grid">
-<<<<<<< HEAD
-        <LocationIntelligencePanel />
-        <OperationsVisualizationPanel />
-=======
         <SmartMapPanel devices={mapDevices} />
         <DeviceManagerPanel devices={data?.devices ?? []} />
->>>>>>> ea3017204e60172cfb4e16dd253e4f0dcb8566a1
         <RegisteredCamerasPanel />
         <SecurityMonitorPanel
           security={
