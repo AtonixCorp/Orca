@@ -204,6 +204,102 @@ app.get('/api/location/dashboard/visualization', (req, res) => {
   });
 });
 
+app.get('/api/v1/sensors/recent', (req, res) => {
+  const limit = Number(req.query.limit || 20);
+
+  const readings = [
+    {
+      id: 'reading-001',
+      sensor_id: 'IOT-44',
+      kind: 'air_quality',
+      value: 42,
+      unit: 'AQI',
+      latitude: -1.3102,
+      longitude: 36.8388,
+      observed_at: new Date().toISOString(),
+      received_at: new Date().toISOString(),
+      metadata: { source: 'map-api-fallback', area: 'Industrial Area' }
+    },
+    {
+      id: 'reading-002',
+      sensor_id: 'GPS-07',
+      kind: 'traffic',
+      value: 87,
+      unit: 'vehicles/min',
+      latitude: -1.2655,
+      longitude: 36.8054,
+      observed_at: new Date().toISOString(),
+      received_at: new Date().toISOString(),
+      metadata: { source: 'map-api-fallback', area: 'Westlands' }
+    },
+    {
+      id: 'reading-003',
+      sensor_id: 'PI-NBO-01',
+      kind: 'other',
+      value: 51,
+      unit: 'celsius',
+      latitude: -1.2921,
+      longitude: 36.8219,
+      observed_at: new Date().toISOString(),
+      received_at: new Date().toISOString(),
+      metadata: { source: 'raspberry-pi', metric: 'cpu_temp' }
+    }
+  ];
+
+  res.json(readings.slice(0, limit));
+});
+
+app.get('/api/v1/traffic/summary', (req, res) => {
+  res.json({
+    total_samples: 3,
+    sensors: [
+      {
+        sensor_id: 'traffic-cbd-001',
+        samples: 48,
+        average_value: 87,
+        unit: 'vehicles/min'
+      },
+      {
+        sensor_id: 'traffic-westlands-002',
+        samples: 32,
+        average_value: 54,
+        unit: 'vehicles/min'
+      },
+      {
+        sensor_id: 'traffic-industrial-003',
+        samples: 41,
+        average_value: 91,
+        unit: 'vehicles/min'
+      }
+    ]
+  });
+});
+
+app.get('/api/v1/cameras', (req, res) => {
+  res.json([
+    {
+      id: 'CAM-12',
+      name: 'Street Camera',
+      status: 'live',
+      location: 'Nairobi CBD',
+      latitude: -1.2864,
+      longitude: 36.8172,
+      stream_url: 'rtsp://camera.local/cam-12',
+      trust_score: 94
+    },
+    {
+      id: 'CAM-18',
+      name: 'Industrial Gate Camera',
+      status: 'live',
+      location: 'Industrial Area',
+      latitude: -1.3102,
+      longitude: 36.8388,
+      stream_url: 'rtsp://camera.local/cam-18',
+      trust_score: 91
+    }
+  ]);
+});
+
 const router = express.Router();
 
 router.get('/countries', (req, res) => {

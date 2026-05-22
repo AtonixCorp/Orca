@@ -12,7 +12,6 @@ import RecentReadingsPanel from "@/components/RecentReadingsPanel";
 import RegisteredCamerasPanel from "@/components/RegisteredCamerasPanel";
 import TrafficSummaryPanel from "@/components/TrafficSummaryPanel";
 import OperationsVisualizationPanel from "@/components/OperationsVisualizationPanel";
-import SmartCito3DControlPlane from "@/components/SmartCito3DControlPlane";
 
 export default function Dashboard() {
   return (
@@ -27,7 +26,6 @@ export default function Dashboard() {
         <RegisteredCamerasPanel />
         <TrafficSummaryPanel />
         <RecentReadingsPanel />
-        <SmartCito3DControlPlane />
       </div>
     </section>
   );

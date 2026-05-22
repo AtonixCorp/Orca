@@ -15,11 +15,23 @@ const layerDefaults = {
   weather: true,
 };
 
+type VisualizationTopic = "map" | "gps" | "traffic" | "threat" | "weather" | "device";
+
+const topics: Array<{ key: VisualizationTopic; label: string; description: string }> = [
+  { key: "map", label: "Map", description: "City zones, roads, regions, and risk areas." },
+  { key: "gps", label: "GPS", description: "GPS paths, live coordinates, and movement history." },
+  { key: "traffic", label: "Traffic", description: "Congestion, road flow, and traffic intensity." },
+  { key: "threat", label: "Threat", description: "AI alerts, suspicious activity, and threat waves." },
+  { key: "weather", label: "Weather", description: "Rain, wind, heat, and environmental overlays." },
+  { key: "device", label: "Device", description: "IoT, cameras, Raspberry Pi, GPS nodes, and trust scores." },
+];
+
 export default function OperationsVisualizationPanel() {
   const [mode, setMode] = useState<VisualizationMode>("2d");
+  const [topic, setTopic] = useState<VisualizationTopic>("map");
   const [data, setData] = useState<OperationsVisualizationPayload | null>(null);
-  const [layers, setLayers] = useState(layerDefaults);
   const [selected, setSelected] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -40,8 +52,10 @@ export default function OperationsVisualizationPanel() {
     };
   }, []);
 
+  const activeTopic = topics.find((item) => item.key === topic) ?? topics[0];
+
   const selectedLabel = useMemo(() => {
-    if (!selected || !data) return "Select any object on the map";
+    if (!selected || !data) return `Open a ${activeTopic.label} object to inspect it`;
     const all = [
       ...data.devices,
       ...data.traffic,
@@ -50,7 +64,7 @@ export default function OperationsVisualizationPanel() {
       ...data.map.zones,
     ];
     return all.find((item) => item.id === selected)?.label ?? selected;
-  }, [selected, data]);
+  }, [selected, data, activeTopic.label]);
 
   function toggleLayer(key: keyof typeof layerDefaults) {
     setLayers((current) => ({ ...current, [key]: !current[key] }));
@@ -61,11 +75,8 @@ export default function OperationsVisualizationPanel() {
       <div className="ops-viz-header">
         <div>
           <p className="ops-viz-eyebrow">SmartCito Operations Visualization</p>
-          <h3>2D + 3D GPS, Traffic, Map, Threat, Weather, and Device View</h3>
-          <p className="muted">
-            Unified visualization layer for operators. Switch between 2D and 3D,
-            filter map layers, inspect devices, and view live operational risks.
-          </p>
+          <h3>{activeTopic.label} Visualization</h3>
+          <p className="muted">{activeTopic.description}</p>
         </div>
 
         <div className="ops-viz-mode">
@@ -78,45 +89,61 @@ export default function OperationsVisualizationPanel() {
         </div>
       </div>
 
-      <div className="ops-viz-layout">
+      <div className="ops-topic-tabs">
+        {topics.map((item) => (
+          <button
+            key={item.key}
+            className={topic === item.key ? "active" : ""}
+            onClick={() => {
+              setTopic(item.key);
+              setSelected(null);
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={`ops-viz-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
         <aside className="ops-viz-sidebar">
-          <strong>Visualization Layers</strong>
-          <div className="ops-viz-layer-list">
-            {Object.keys(layers).map((key) => (
-              <button
-                key={key}
-                className={layers[key as keyof typeof layers] ? "active" : ""}
-                onClick={() => toggleLayer(key as keyof typeof layers)}
-              >
-                {key}
-              </button>
-            ))}
-          </div>
+          <button
+            className="ops-sidebar-toggle"
+            onClick={() => setSidebarCollapsed((value) => !value)}
+            aria-label={sidebarCollapsed ? "Expand visualization sidebar" : "Collapse visualization sidebar"}
+          >
+            {sidebarCollapsed ? "›" : "‹"}
+          </button>
 
-          <div className="ops-viz-inspector">
-            <strong>Inspector</strong>
-            <p>{selectedLabel}</p>
-            <small>
-              API: <code>/api/location/dashboard/visualization</code>
-            </small>
-          </div>
+          {!sidebarCollapsed && (
+            <>
+              <strong>{activeTopic.label} Inspector</strong>
 
-          <div className="ops-viz-legend">
-            <span><b className="legend-dot gps" /> GPS</span>
-            <span><b className="legend-dot traffic" /> Traffic</span>
-            <span><b className="legend-dot threat" /> Threat</span>
-            <span><b className="legend-dot weather" /> Weather</span>
-            <span><b className="legend-dot device" /> Device</span>
-          </div>
+              <div className="ops-viz-inspector">
+                <p>{selectedLabel}</p>
+                <small>
+                  Topic: <code>{topic}</code>
+                </small>
+              </div>
+
+              <div className="ops-viz-legend">
+                {topic === "map" && <span><b className="legend-dot map" /> Map zones</span>}
+                {topic === "gps" && <span><b className="legend-dot gps" /> GPS path</span>}
+                {topic === "traffic" && <span><b className="legend-dot traffic" /> Traffic heat</span>}
+                {topic === "threat" && <span><b className="legend-dot threat" /> Threat pulse</span>}
+                {topic === "weather" && <span><b className="legend-dot weather" /> Weather cell</span>}
+                {topic === "device" && <span><b className="legend-dot device" /> Device pin</span>}
+              </div>
+            </>
+          )}
         </aside>
 
-        <div className={`ops-viz-map ${mode}`}>
+        <div className={`ops-viz-map ${mode} topic-${topic}`}>
           <div className="ops-viz-grid" />
           <div className="ops-road road-a" />
           <div className="ops-road road-b" />
           <div className="ops-road road-c" />
 
-          {layers.map &&
+          {topic === "map" &&
             data?.map.zones.map((zone) => (
               <button
                 key={zone.id}
@@ -128,7 +155,7 @@ export default function OperationsVisualizationPanel() {
               </button>
             ))}
 
-          {layers.gps &&
+          {topic === "gps" &&
             data?.gps_paths.map((path) =>
               path.points.map((point, index) => (
                 <span
@@ -139,7 +166,7 @@ export default function OperationsVisualizationPanel() {
               )),
             )}
 
-          {layers.traffic &&
+          {topic === "traffic" &&
             data?.traffic.map((traffic) => (
               <button
                 key={traffic.id}
@@ -151,7 +178,7 @@ export default function OperationsVisualizationPanel() {
               </button>
             ))}
 
-          {layers.weather &&
+          {topic === "weather" &&
             data?.weather.map((weather) => (
               <button
                 key={weather.id}
@@ -163,17 +190,18 @@ export default function OperationsVisualizationPanel() {
               </button>
             ))}
 
-          {layers.threats &&
+          {topic === "threat" &&
             data?.threats.map((threat) => (
               <button
                 key={threat.id}
                 className={`threat-pulse ${threat.severity}`}
                 style={{ left: `${threat.x}%`, top: `${threat.y}%` }}
                 onClick={() => setSelected(threat.id)}
+                title={threat.label}
               />
             ))}
 
-          {layers.devices &&
+          {topic === "device" &&
             data?.devices.map((device) => (
               <button
                 key={device.id}

@@ -56,12 +56,37 @@
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 1rem;
+  transition: grid-template-columns 180ms ease;
+}
+
+.ops-viz-layout.sidebar-collapsed {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.ops-viz-layout.sidebar-collapsed .ops-viz-map {
+  min-height: 760px;
 }
 
 .ops-viz-sidebar {
-  display: grid;
-  align-content: start;
-  gap: 1rem;
+  position: relative;
+  min-width: 0;
+}
+
+.ops-sidebar-toggle {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(15, 23, 42, 0.88);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.ops-sidebar-toggle:hover {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.18);
 }
 
 .ops-viz-inspector,
@@ -90,6 +115,8 @@
 .legend-dot.threat { background: #ef4444; }
 .legend-dot.weather { background: #38bdf8; }
 .legend-dot.device { background: #22c55e; }
+
+.legend-dot.map { background: #a78bfa; }
 
 .ops-viz-map {
   position: relative;
@@ -270,5 +297,70 @@
   .ops-viz-header {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+}
+
+.ops-topic-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.ops-topic-tabs button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  background: rgba(15, 23, 42, 0.88);
+  color: var(--fg);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ops-topic-tabs button.active {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.18);
+}
+
+.topic-map {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(167, 139, 250, 0.18), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+.topic-gps {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.16), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+.topic-traffic {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(251, 146, 60, 0.18), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+.topic-threat {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(239, 68, 68, 0.2), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+.topic-weather {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.18), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+.topic-device {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(34, 197, 94, 0.16), transparent 36%),
+    linear-gradient(135deg, #07111f, #101827);
+}
+
+@media (max-width: 900px) {
+  .ops-topic-tabs {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
