@@ -126,6 +126,51 @@ const dashboard3dPayload = {
   ]
 };
 
+const operationsVisualizationPayload = {
+  generated_at: new Date().toISOString(),
+  map: {
+    name: 'SmartCito Nairobi Operations Map',
+    center: { latitude: -1.2921, longitude: 36.8219 },
+    zones: [
+      { id: 'zone-cbd', label: 'CBD', x: 50, y: 46, risk: 'medium' },
+      { id: 'zone-westlands', label: 'Westlands', x: 38, y: 34, risk: 'low' },
+      { id: 'zone-industrial', label: 'Industrial Area', x: 62, y: 65, risk: 'high' }
+    ]
+  },
+  devices: [
+    { id: 'PI-NBO-01', type: 'edge', status: 'verified', trust_score: 96, x: 30, y: 42, label: 'Raspberry Pi Edge' },
+    { id: 'CAM-12', type: 'camera', status: 'verified', trust_score: 94, x: 56, y: 36, label: 'Street Camera' },
+    { id: 'GPS-07', type: 'gps', status: 'unverified', trust_score: 72, x: 68, y: 58, label: 'GPS Tracker' },
+    { id: 'IOT-44', type: 'iot', status: 'verified', trust_score: 88, x: 38, y: 66, label: 'IoT Sensor' }
+  ],
+  gps_paths: [
+    {
+      id: 'gps-path-07',
+      device_id: 'GPS-07',
+      points: [
+        { x: 24, y: 68 },
+        { x: 36, y: 62 },
+        { x: 50, y: 60 },
+        { x: 68, y: 58 }
+      ]
+    }
+  ],
+  traffic: [
+    { id: 'traffic-1', label: 'CBD congestion', level: 'high', x: 52, y: 48, value: 87 },
+    { id: 'traffic-2', label: 'Westlands flow', level: 'medium', x: 38, y: 34, value: 54 },
+    { id: 'traffic-3', label: 'Industrial queue', level: 'high', x: 64, y: 66, value: 91 }
+  ],
+  threats: [
+    { id: 'threat-1', label: 'AI motion anomaly', severity: 'high', x: 56, y: 36 },
+    { id: 'threat-2', label: 'GPS deviation', severity: 'medium', x: 68, y: 58 }
+  ],
+  weather: [
+    { id: 'weather-1', label: 'Rain cell', type: 'rain', intensity: 66, x: 44, y: 30 },
+    { id: 'weather-2', label: 'Wind corridor', type: 'wind', intensity: 42, x: 70, y: 42 },
+    { id: 'weather-3', label: 'Heat island', type: 'heat', intensity: 78, x: 60, y: 70 }
+  ]
+};
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'location-api' });
 });
@@ -149,6 +194,13 @@ app.post('/api/location/dashboard/audit', requireDashboardAuth, (req, res) => {
       payload: req.body || {},
       timestamp: new Date().toISOString()
     }
+  });
+});
+
+app.get('/api/location/dashboard/visualization', (req, res) => {
+  res.json({
+    ...operationsVisualizationPayload,
+    generated_at: new Date().toISOString()
   });
 });
 
