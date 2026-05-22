@@ -1,0 +1,114 @@
+.location-intelligence {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.location-eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.location-grid label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.location-grid select,
+.location-grid input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--fg);
+  padding: 0.65rem;
+}
+
+.location-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.location-actions button,
+.location-inline button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--fg);
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+.location-actions button.primary {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.location-results {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.location-results > div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.location-results p {
+  margin-bottom: 0;
+  color: var(--fg-muted);
+}
+
+.confidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.confidence-list span {
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+@media (max-width: 900px) {
+  .location-header {
+    flex-direction: column;
+  }
+
+  .location-grid,
+  .location-results {
+    grid-template-columns: 1fr;
+  }
+}

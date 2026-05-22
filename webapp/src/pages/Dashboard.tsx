@@ -12,6 +12,7 @@ import RecentReadingsPanel from "@/components/RecentReadingsPanel";
 import RegisteredCamerasPanel from "@/components/RegisteredCamerasPanel";
 import TrafficSummaryPanel from "@/components/TrafficSummaryPanel";
 import OperationsVisualizationPanel from "@/components/OperationsVisualizationPanel";
+import LocationIntelligencePanel from "@/components/LocationIntelligencePanel";
 
 export default function Dashboard() {
   return (
@@ -22,6 +23,7 @@ export default function Dashboard() {
       </p>
 
       <div className="dashboard-grid">
+        <LocationIntelligencePanel />
         <OperationsVisualizationPanel />
         <RegisteredCamerasPanel />
         <TrafficSummaryPanel />

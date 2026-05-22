@@ -10,6 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "./client";
 
+const BACKEND_ENABLED = import.meta.env.VITE_ENABLE_BACKEND === "true";
+
 export type CameraDeviceType = "body_camera" | "micro_camera";
 export type StreamStatus = "offline" | "connecting" | "live" | "degraded";
 
@@ -42,7 +44,7 @@ export const demoCameraFleet: CameraDevice[] = [
     registered_at: new Date().toISOString(),
     last_seen_at: new Date().toISOString(),
     stream_status: "live",
-    location: { lat: -25.7479, lon: 28.2293, accuracy_m: 4.2 },
+    location: { lat: -1.2864, lon: 36.8172, accuracy_m: 4.2 },
     battery_level: 87,
     mounted: true,
     tamper_detected: false,
@@ -55,7 +57,7 @@ export const demoCameraFleet: CameraDevice[] = [
     registered_at: new Date().toISOString(),
     last_seen_at: new Date().toISOString(),
     stream_status: "connecting",
-    location: { lat: -26.2041, lon: 28.0473, accuracy_m: 8 },
+    location: { lat: -1.3102, lon: 36.8388, accuracy_m: 8 },
     battery_level: 52,
     mounted: true,
     tamper_detected: false,
@@ -63,14 +65,22 @@ export const demoCameraFleet: CameraDevice[] = [
 ];
 
 export async function fetchCameras(): Promise<CameraDevice[]> {
-  const { data } = await api.get<CameraDevice[]>("/cameras");
-  return data;
+  if (!BACKEND_ENABLED) {
+    return demoCameraFleet;
+  }
+
+  try {
+    const { data } = await api.get<CameraDevice[]>("/cameras");
+    return data;
+  } catch {
+    return demoCameraFleet;
+  }
 }
 
 export function useCameras() {
   return useQuery({
     queryKey: ["cameras", "fleet"],
     queryFn: fetchCameras,
-    refetchInterval: 5_000,
+    refetchInterval: BACKEND_ENABLED ? 5_000 : false,
   });
 }

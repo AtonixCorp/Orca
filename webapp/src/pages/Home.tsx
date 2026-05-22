@@ -12,10 +12,18 @@ import { Link } from "react-router-dom";
 
 type ApiStatus = "checking" | "online" | "offline";
 
+const BACKEND_ENABLED = import.meta.env.VITE_ENABLE_BACKEND === "true";
+
 export default function Home() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
+  const [apiStatus, setApiStatus] = useState<ApiStatus>(
+    BACKEND_ENABLED ? "checking" : "offline",
+  );
 
   useEffect(() => {
+    if (!BACKEND_ENABLED) {
+      return;
+    }
+
     const controller = new AbortController();
 
     fetch("/api/v1/health/live", { signal: controller.signal })

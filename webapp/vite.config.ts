@@ -26,18 +26,6 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     proxy: {
-      "/api/v1/sensors/recent": {
-        target: "http://localhost:4010",
-        changeOrigin: true,
-      },
-      "/api/v1/traffic/summary": {
-        target: "http://localhost:4010",
-        changeOrigin: true,
-      },
-      "/api/v1/cameras": {
-        target: "http://localhost:4010",
-        changeOrigin: true,
-      },
       "/api/location": {
         target: "http://localhost:4010",
         changeOrigin: true,

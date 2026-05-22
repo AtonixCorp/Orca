@@ -16,6 +16,27 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
+By default, the webapp runs in offline demo mode so the dashboard does not spam
+Vite with `ECONNREFUSED` errors when backend services are not running.
+
+To connect real backend services:
+
+```bash
+VITE_ENABLE_BACKEND=true npm run dev
+```
+
+Then start the services in separate terminals:
+
+```bash
+cd ../citosmart
+uvicorn app.main:app --reload --port 8000
+```
+
+```bash
+cd ../map
+npm start
+```
+
 The dev server proxies `/api` to `http://localhost:8000`, so start the
 citosmart with `uvicorn app.main:app --reload` in another shell (or use
 `docker compose up` from the repo root).
