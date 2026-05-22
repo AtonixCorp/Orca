@@ -1,0 +1,24 @@
+{
+  "KE": {
+    "020": { "city": "Nairobi", "region": "NBO", "lat": -1.2921, "lon": 36.8219 },
+    "041": { "city": "Mombasa", "region": "MSA", "lat": -4.0435, "lon": 39.6682 },
+    "057": { "city": "Kisumu", "region": "KSM", "lat": -0.0917, "lon": 34.7679 }
+  },
+  "US": {
+    "415": { "city": "San Francisco", "region": "CA", "lat": 37.7749, "lon": -122.4194 },
+    "212": { "city": "New York", "region": "NY", "lat": 40.7128, "lon": -74.0060 },
+    "512": { "city": "Austin", "region": "TX", "lat": 30.2672, "lon": -97.7431 }
+  },
+  "GB": {
+    "020": { "city": "London", "region": "LDN", "lat": 51.5074, "lon": -0.1278 },
+    "0161": { "city": "Manchester", "region": "MAN", "lat": 53.4808, "lon": -2.2426 }
+  },
+  "DE": {
+    "030": { "city": "Berlin", "region": "BE", "lat": 52.52, "lon": 13.405 },
+    "089": { "city": "Munich", "region": "BY", "lat": 48.1351, "lon": 11.582 }
+  },
+  "IN": {
+    "022": { "city": "Mumbai", "region": "MH", "lat": 19.076, "lon": 72.8777 },
+    "080": { "city": "Bengaluru", "region": "KA", "lat": 12.9716, "lon": 77.5946 }
+  }
+}
