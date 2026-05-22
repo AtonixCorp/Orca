@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#111b2e"/>
+    </linearGradient>
+    <linearGradient id="card2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c2740"/>
+      <stop offset="100%" stop-color="#152037"/>
+    </linearGradient>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4cc9f0"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="420" fill="url(#bg2)"/>
+  <text x="500" y="40" text-anchor="middle" fill="#e7eefc" font-size="22" font-weight="700">
+    SmartCito Edge — Data Flow
+  </text>
+  <text x="500" y="64" text-anchor="middle" fill="#8aa0c8" font-size="13">
+    Sensors → Raspberry Pi → Secure Gateway → Cloud → Dashboard
+  </text>
+
+  <g font-size="13" fill="#e7eefc">
+    <rect x="40" y="140" width="160" height="120" rx="14" fill="url(#card2)" stroke="#2a3a5e"/>
+    <text x="120" y="175" text-anchor="middle" fill="#4cc9f0" font-weight="700">Sensors</text>
+    <text x="120" y="205" text-anchor="middle">IoT · GPS · Camera</text>
+    <text x="120" y="225" text-anchor="middle" fill="#8aa0c8" font-size="11">Raw telemetry</text>
+
+    <rect x="240" y="140" width="160" height="120" rx="14" fill="url(#card2)" stroke="#2a3a5e"/>
+    <text x="320" y="175" text-anchor="middle" fill="#90e0ef" font-weight="700">Edge Node</text>
+    <text x="320" y="205" text-anchor="middle">Raspberry Pi</text>
+    <text x="320" y="225" text-anchor="middle" fill="#8aa0c8" font-size="11">AI Preprocess</text>
+
+    <rect x="440" y="140" width="160" height="120" rx="14" fill="url(#card2)" stroke="#2a3a5e"/>
+    <text x="520" y="175" text-anchor="middle" fill="#ffd166" font-weight="700">Secure Gateway</text>
+    <text x="520" y="205" text-anchor="middle">Encrypted · Token</text>
+    <text x="520" y="225" text-anchor="middle" fill="#8aa0c8" font-size="11">ATP Trust</text>
+
+    <rect x="640" y="140" width="160" height="120" rx="14" fill="url(#card2)" stroke="#2a3a5e"/>
+    <text x="720" y="175" text-anchor="middle" fill="#ef476f" font-weight="700">Cloud</text>
+    <text x="720" y="205" text-anchor="middle">OpenStack · K8s</text>
+    <text x="720" y="225" text-anchor="middle" fill="#8aa0c8" font-size="11">Storage · Compute</text>
+
+    <rect x="840" y="140" width="120" height="120" rx="14" fill="url(#card2)" stroke="#2a3a5e"/>
+    <text x="900" y="175" text-anchor="middle" fill="#06d6a0" font-weight="700">Dashboard</text>
+    <text x="900" y="205" text-anchor="middle">2D / 3D Map</text>
+    <text x="900" y="225" text-anchor="middle" fill="#8aa0c8" font-size="11">Operator View</text>
+  </g>
+
+  <g stroke="#4cc9f0" stroke-width="2" fill="none" marker-end="url(#arrow2)">
+    <path d="M200 200 L 240 200"/>
+    <path d="M400 200 L 440 200"/>
+    <path d="M600 200 L 640 200"/>
+    <path d="M800 200 L 840 200"/>
+  </g>
+
+  <text x="500" y="360" text-anchor="middle" fill="#8aa0c8" font-size="12">
+    Every hop is authenticated, encrypted, and logged to the ATP ledger.
+  </text>
+</svg>

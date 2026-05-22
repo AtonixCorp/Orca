@@ -1,0 +1,7 @@
+[
+  { "iso2": "KE", "iso3": "KEN", "name": "Kenya", "dialCode": "+254" },
+  { "iso2": "US", "iso3": "USA", "name": "United States", "dialCode": "+1" },
+  { "iso2": "GB", "iso3": "GBR", "name": "United Kingdom", "dialCode": "+44" },
+  { "iso2": "DE", "iso3": "DEU", "name": "Germany", "dialCode": "+49" },
+  { "iso2": "IN", "iso3": "IND", "name": "India", "dialCode": "+91" }
+]

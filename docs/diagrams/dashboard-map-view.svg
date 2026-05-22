@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#111b2e"/>
+    </linearGradient>
+    <radialGradient id="mapBg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1b2a4a"/>
+      <stop offset="100%" stop-color="#0c1426"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1000" height="540" fill="url(#bg4)"/>
+  <text x="500" y="36" text-anchor="middle" fill="#e7eefc" font-size="22" font-weight="700">
+    SmartCito Dashboard — 2D / 3D Map View
+  </text>
+
+  <!-- Sidebar -->
+  <rect x="20" y="70" width="220" height="450" rx="14" fill="#152037" stroke="#2a3a5e"/>
+  <text x="130" y="100" text-anchor="middle" fill="#4cc9f0" font-weight="700">Location Intelligence</text>
+  <g font-size="12" fill="#e7eefc">
+    <text x="40" y="135">Country: Kenya</text>
+    <text x="40" y="160">Region: Nairobi</text>
+    <text x="40" y="185">Area Code: 020</text>
+    <text x="40" y="210">IP: 41.x.x.x</text>
+    <text x="40" y="235">GPS: -1.292, 36.821</text>
+    <text x="40" y="270" fill="#ffd166">Confidence: 94%</text>
+    <text x="40" y="295" fill="#8aa0c8">Source: GPS</text>
+  </g>
+
+  <text x="130" y="345" text-anchor="middle" fill="#06d6a0" font-weight="700">Devices</text>
+  <g font-size="12" fill="#e7eefc">
+    <circle cx="45" cy="370" r="5" fill="#4cc9f0"/><text x="58" y="374">IoT Sensors (12)</text>
+    <circle cx="45" cy="395" r="5" fill="#ef476f"/><text x="58" y="399">Cameras (5)</text>
+    <circle cx="45" cy="420" r="5" fill="#ffd166"/><text x="58" y="424">GPS Nodes (8)</text>
+    <circle cx="45" cy="445" r="5" fill="#90e0ef"/><text x="58" y="449">Edge Pis (3)</text>
+  </g>
+
+  <!-- Map Canvas -->
+  <rect x="260" y="70" width="720" height="450" rx="14" fill="url(#mapBg)" stroke="#2a3a5e"/>
+
+  <!-- Grid lines -->
+  <g stroke="#2a3a5e" stroke-width="1" opacity="0.6">
+    <path d="M260 170 L 980 170"/>
+    <path d="M260 270 L 980 270"/>
+    <path d="M260 370 L 980 370"/>
+    <path d="M260 470 L 980 470"/>
+    <path d="M380 70 L 380 520"/>
+    <path d="M500 70 L 500 520"/>
+    <path d="M620 70 L 620 520"/>
+    <path d="M740 70 L 740 520"/>
+    <path d="M860 70 L 860 520"/>
+  </g>
+
+  <!-- Roads -->
+  <g stroke="#4cc9f0" stroke-width="2" fill="none" opacity="0.5">
+    <path d="M280 460 C 400 360, 600 380, 940 200"/>
+    <path d="M300 100 C 420 200, 600 220, 920 460"/>
+  </g>
+
+  <!-- Device pins -->
+  <g>
+    <circle cx="430" cy="220" r="9" fill="#4cc9f0"/><circle cx="430" cy="220" r="16" fill="#4cc9f0" opacity="0.25"/>
+    <circle cx="600" cy="320" r="9" fill="#ef476f"/><circle cx="600" cy="320" r="16" fill="#ef476f" opacity="0.25"/>
+    <circle cx="760" cy="250" r="9" fill="#ffd166"/><circle cx="760" cy="250" r="16" fill="#ffd166" opacity="0.25"/>
+    <circle cx="520" cy="410" r="9" fill="#90e0ef"/><circle cx="520" cy="410" r="16" fill="#90e0ef" opacity="0.25"/>
+    <circle cx="850" cy="400" r="9" fill="#06d6a0"/><circle cx="850" cy="400" r="16" fill="#06d6a0" opacity="0.25"/>
+  </g>
+
+  <!-- Camera popup -->
+  <g>
+    <rect x="610" y="240" width="160" height="80" rx="8" fill="#0f1a2e" stroke="#ef476f"/>
+    <text x="690" y="262" text-anchor="middle" fill="#ef476f" font-size="12" font-weight="700">CAM-12 LIVE</text>
+    <rect x="620" y="272" width="140" height="40" fill="#1c2740"/>
+    <text x="690" y="297" text-anchor="middle" fill="#8aa0c8" font-size="11">Streaming…</text>
+  </g>
+
+  <text x="620" y="510" text-anchor="middle" fill="#8aa0c8" font-size="12">
+    Click a pin → open live camera, telemetry, and ATP-verified location
+  </text>
+</svg>

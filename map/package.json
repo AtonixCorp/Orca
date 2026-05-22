@@ -1,0 +1,17 @@
+{
+  "name": "@smartcito/location-intelligence",
+  "version": "1.0.0",
+  "description": "SmartCito Location Intelligence Engine: country/region/area-code/IP/GPS fusion.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

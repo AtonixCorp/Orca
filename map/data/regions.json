@@ -1,0 +1,24 @@
+{
+  "KE": [
+    { "code": "NBO", "name": "Nairobi" },
+    { "code": "MSA", "name": "Mombasa" },
+    { "code": "KSM", "name": "Kisumu" }
+  ],
+  "US": [
+    { "code": "CA", "name": "California" },
+    { "code": "NY", "name": "New York" },
+    { "code": "TX", "name": "Texas" }
+  ],
+  "GB": [
+    { "code": "LDN", "name": "London" },
+    { "code": "MAN", "name": "Manchester" }
+  ],
+  "DE": [
+    { "code": "BE", "name": "Berlin" },
+    { "code": "BY", "name": "Bavaria" }
+  ],
+  "IN": [
+    { "code": "MH", "name": "Maharashtra" },
+    { "code": "KA", "name": "Karnataka" }
+  ]
+}
