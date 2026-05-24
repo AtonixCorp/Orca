@@ -17,8 +17,8 @@ npm run dev          # http://localhost:5173
 ```
 
 The dev server proxies `/api` to `http://localhost:8000`, so start the
-citosmart with `uvicorn app.main:app --reload` in another shell (or use
-`docker compose up` from the repo root).
+backend API with `uvicorn app.main:app --reload` from [`../citosmart/`](../citosmart/)
+in another shell, or use `docker compose up` from the repo root.
 
 ## Project Layout
 

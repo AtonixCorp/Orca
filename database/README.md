@@ -9,7 +9,7 @@ Schemas, connectors, and migrations for SmartCito.
 - **TimescaleDB** (PostgreSQL extension) — time-series sensor data
 
 The authoritative SQLAlchemy models and Alembic migrations live in the
-backend at [`../citosmart/`](../citosmart/) (see `app/db/` and `migrations/`).
+backend API service at [`../citosmart/`](../citosmart/).
 This folder collects **shared schema artifacts** and **non-backend
 connectors**.
 

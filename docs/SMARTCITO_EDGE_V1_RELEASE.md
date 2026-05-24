@@ -133,20 +133,18 @@ The diagram above shows the end-to-end flow:
 
 ### 3D Operational Scene
 
-A live Three.js scene (`dashboard/src/components/Scene3DOperations.jsx`) renders:
+A live Three.js scene now lives in the main frontend at
+`webapp/src/components/ThreeDashboardPanel.tsx` and renders:
 
 - A city ground plane with grid overlay
 - Glowing device pins (IoT, GPS, camera, edge nodes)
 - A central dashboard hub
 - Animated data packets flowing from each device to the hub along curved arcs
 
-Use it in the dashboard:
+Use it in the webapp dashboard:
 
-```jsx
-import Scene3DOperations from './components/Scene3DOperations';
+```tsx
+import ThreeDashboardPanel from "@/components/ThreeDashboardPanel";
 
-<Scene3DOperations devices={[
-  { id: 'cam-12', type: 'camera', x: 20, z: -10 },
-  { id: 'iot-44', type: 'iot', x: -25, z: 15 }
-]} />
+<ThreeDashboardPanel scene={sceneOverview} />
 ```

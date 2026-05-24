@@ -64,12 +64,12 @@ See [`map/README.md`](map/README.md) for full API and usage.
 | Service     | URL                        | Purpose                       |
 |-------------|----------------------------|-------------------------------|
 | Webapp    | http://localhost:5173      | React dashboard               |
-| Citosmart API | http://localhost:8000      | FastAPI (OpenAPI at `/docs`)  |
+| SmartCito API | http://localhost:8000      | FastAPI backend (OpenAPI at `/docs`)  |
 | PostgreSQL  | localhost:5432             | Relational store              |
 | Redis       | localhost:6379             | Cache & pub/sub               |
 | Kafka       | localhost:9092             | Event streaming               |
 
-### Local Citosmart Development
+### Local SmartCito API Development
 
 ```bash
 cd citosmart
@@ -88,6 +88,9 @@ npm run dev
 
 Detailed walkthroughs live in [`docs/`](docs/).
 
+Repository ownership and folder responsibilities are defined in
+[`docs/REPOSITORY_STRUCTURE.md`](docs/REPOSITORY_STRUCTURE.md).
+
 For a single wiki-style project entry point, start with [`docs/WIKI.md`](docs/WIKI.md).
 
 For pilot or hardware-backed deployments, see [`docs/DOCKER_DEPLOYMENT.md`](docs/DOCKER_DEPLOYMENT.md)
@@ -105,27 +108,30 @@ The dashboard renders:
 - Authenticated device pins (IoT, cameras, GPS, edge Pis)
 - Live camera popups linked to GPS coordinates
 - Confidence-scored unified location
-- 3D operational scene (`dashboard/src/components/Scene3DOperations.jsx`)
+- 3D operational scene (`webapp/src/components/ThreeDashboardPanel.tsx`)
 
 ---
 
-## Module Layout
+## Repository Layout
 
 | Folder | Purpose |
 | ------ | ------- |
-| `ai/` | AI threat detection and inference |
-| `iot/` | IoT device registration and ingestion |
-| `gps/` | GPS readers and validators |
-| `camera/` | Camera streaming and frame processing |
-| `map/` | **Location intelligence: country/region/area-code/IP/GPS fusion + 2D/3D rendering** |
-| `security/` | Authentication and ATP trust scoring |
-| `crypto/` | Cryptography primitives and validation |
-| `containers/` | Debian-based container builds |
-| `openstack/` | OpenStack deployment assets |
-| `debian/` | Debian build rules |
-| `k8s/` | Kubernetes manifests |
-| `tests/` | Cross-module integration tests |
-| `docs/` | Architecture, diagrams, release notes |
+| `citosmart/` | Primary FastAPI application, schemas, services, and migrations |
+| `ingestion/` | External data ingestion pipelines and connectors |
+| `services/` | Deployable microservice workspace for separately scoped services |
+| `database/` | Shared database bootstrap and initialization assets |
+| `ai_models/` | AI/ML inference services and model packaging |
+| `webapp/` | Primary React frontend for operators |
+| `map/` | Location intelligence and mapping subsystem |
+| `security/` | Security services, policy, crypto, IAM, and audit assets |
+| `infra/` | Kubernetes, Terraform, monitoring, and infrastructure code |
+| `hardware/` | Edge hardware integrations and support assets |
+| `scripts/` | Development and operational helper scripts |
+| `tests/` | Cross-module integration and security tests |
+| `docs/` | Architecture, diagrams, runbooks, and reference docs |
+
+Current backend rule: `citosmart/` is the backend API application.
+Use `services/` for separately deployable capabilities.
 
 ---
 

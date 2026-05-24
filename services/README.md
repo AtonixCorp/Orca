@@ -5,11 +5,11 @@ Split-function container services for SmartCito.
 ## Purpose
 
 This folder hosts deployable microservice containers used by Kubernetes and
-local compose-based testing.
+local compose-based testing. The main backend application lives in
+`../citosmart/`.
 
 ## Services
 
-- `api-gateway/`
 - `camera-service/`
 - `gps-service/`
 - `ai-service/`

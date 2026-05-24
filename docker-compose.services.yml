@@ -1,8 +1,7 @@
 services:
-  api-gateway:
+  citosmart:
     build:
-      context: .
-      dockerfile: services/api-gateway/Dockerfile
+      context: ./citosmart
     ports:
       - "8000:8000"
 

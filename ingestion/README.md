@@ -15,8 +15,8 @@ the SmartCito core for processing, storage, and analytics.
 - **Apache Spark** — batch + structured streaming transformations
 - **Python 3.11+** — connector implementations
 
-> The production-grade Python backend (FastAPI + Kafka + MQTT consumers) lives
-> under [`citosmart/`](../citosmart/). This folder is for **new connectors**
+> The production-grade Python backend API lives under
+> [`../citosmart/`](../citosmart/). This folder is for **new connectors**
 > and ingestion adapters contributed by the community.
 
 ## Layout
@@ -34,7 +34,7 @@ ingestion/
 
 1. Create `ingestion/connectors/<your_source>/`.
 2. Implement the connector following the interface used by
-   `citosmart/app/services/ingestion.py`.
+   the backend API service in `citosmart/app/services/`.
 3. Document configuration (env vars, topics, schemas) in a local `README.md`.
 4. Add unit + integration tests under [`../tests/`](../tests/).
 5. Submit a PR per the [contribution workflow](../CONTRIBUTING.md).
