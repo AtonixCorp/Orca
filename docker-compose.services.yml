@@ -1,59 +1,199 @@
+x-logging: &stdout-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   citosmart:
     build:
       context: ./citosmart
+    image: ${CITOSMART_IMAGE:-smartcito/api-gateway:local}
+    container_name: smartcito-citosmart
+    env_file: .env
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  ingestion-kafka-producer:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    image: ${INGESTION_KAFKA_PRODUCER_IMAGE:-smartcito/ingestion-kafka-producer:local}
+    container_name: smartcito-ingestion-kafka-producer
+    env_file: .env
+    command: ["uvicorn", "ingestion.kafka_producer_service:app", "--host", "0.0.0.0", "--port", "8100"]
+    ports:
+      - "${INGESTION_KAFKA_PRODUCER_PORT:-8100}:8100"
+    depends_on:
+      - kafka
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8100/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  ingestion-spark:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    image: ${INGESTION_SPARK_IMAGE:-smartcito/ingestion-spark:local}
+    container_name: smartcito-ingestion-spark
+    env_file: .env
+    command: ["uvicorn", "ingestion.spark_service:app", "--host", "0.0.0.0", "--port", "8101"]
+    ports:
+      - "${INGESTION_SPARK_PORT:-8101}:8101"
+    depends_on:
+      - kafka
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8101/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging: *stdout-logging
 
   camera-service:
     build:
       context: .
       dockerfile: camera_module/Dockerfile
+    image: ${CAMERA_IMAGE:-smartcito/camera-service:local}
+    container_name: smartcito-camera-service
+    env_file: .env
     ports:
-      - "8010:8010"
+      - "${CAMERA_SERVICE_PORT:-8010}:8010"
+    restart: unless-stopped
+    logging: *stdout-logging
 
   gps-service:
     build:
       context: .
       dockerfile: gps_module/Dockerfile
+    image: ${GPS_IMAGE:-smartcito/gps-service:local}
+    container_name: smartcito-gps-service
+    env_file: .env
     ports:
-      - "8011:8011"
+      - "${GPS_SERVICE_PORT:-8011}:8011"
+    restart: unless-stopped
+    logging: *stdout-logging
 
   ai-service:
     build:
       context: .
       dockerfile: ai_models/Dockerfile
+    image: ${AI_IMAGE:-smartcito/ai-service:local}
+    container_name: smartcito-ai-service
+    env_file: .env
     ports:
-      - "8012:8012"
+      - "${AI_SERVICE_PORT:-8012}:8012"
+    restart: unless-stopped
+    logging: *stdout-logging
 
   security-service:
     build:
       context: .
       dockerfile: security/Dockerfile
-    ports:
-      - "8013:8013"
+    image: ${SECURITY_IMAGE:-smartcito/security-service:local}
+    container_name: smartcito-security-service
     env_file: .env
+    ports:
+      - "${SECURITY_SERVICE_PORT:-8013}:8013"
+    depends_on:
+      - citosmart
+    restart: unless-stopped
+    logging: *stdout-logging
 
   hardware-agent:
     build:
       context: .
       dockerfile: hardware/Dockerfile
+    image: ${HARDWARE_IMAGE:-smartcito/hardware-agent:local}
+    container_name: smartcito-hardware-agent
+    env_file: .env
     ports:
-      - "8014:8014"
+      - "${HARDWARE_AGENT_PORT:-8014}:8014"
+    restart: unless-stopped
+    logging: *stdout-logging
 
-  db-service:
+  postgres:
     image: cgr.dev/chainguard/postgres:latest@sha256:34a4d686aa44583457bbdbdeb662243e7ab29e89e5c9b40df8e33baa6b75dc47
+    container_name: smartcito-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-smartcito}
-      POSTGRES_USER: ${POSTGRES_USER:-smartcito}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartcito}
+      POSTGRES_DB: ${DB_NAME:-smartcito}
+      POSTGRES_USER: ${DB_USER:-smartcito}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartcito}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - ./database/init/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smartcito}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *stdout-logging
 
-  frontend-service:
+  redis:
+    image: redis:7-alpine
+    container_name: smartcito-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: smartcito-kafka
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: smartcito-mqtt
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  webapp:
     build:
       context: ./webapp
+    image: ${WEBAPP_IMAGE:-smartcito/frontend-service:local}
+    container_name: smartcito-webapp
+    env_file: .env
     ports:
-      - "5173:80"
+      - "${WEBAPP_PORT:-5173}:80"
+    depends_on:
+      - citosmart
+    restart: unless-stopped
+    logging: *stdout-logging
+
+volumes:
+  pgdata:

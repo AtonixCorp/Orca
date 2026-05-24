@@ -32,6 +32,7 @@ services:
       context: ./webapp
     image: smartcito/frontend-service:local
     container_name: smartcito-webapp
+    env_file: .env
     ports:
       - "5173:80"
     depends_on:
@@ -44,6 +45,7 @@ services:
       dockerfile: camera_module/Dockerfile
     image: smartcito/camera-service:local
     container_name: smartcito-camera-service
+    env_file: .env
     ports:
       - "8010:8010"
     restart: unless-stopped
@@ -54,6 +56,7 @@ services:
       dockerfile: gps_module/Dockerfile
     image: smartcito/gps-service:local
     container_name: smartcito-gps-service
+    env_file: .env
     ports:
       - "8011:8011"
     restart: unless-stopped
@@ -64,6 +67,7 @@ services:
       dockerfile: ai_models/Dockerfile
     image: smartcito/ai-service:local
     container_name: smartcito-ai-service
+    env_file: .env
     ports:
       - "8012:8012"
     restart: unless-stopped
@@ -87,6 +91,7 @@ services:
       dockerfile: hardware/Dockerfile
     image: smartcito/hardware-agent:local
     container_name: smartcito-hardware-agent
+    env_file: .env
     ports:
       - "8014:8014"
     restart: unless-stopped
@@ -95,16 +100,16 @@ services:
     image: cgr.dev/chainguard/postgres:latest@sha256:34a4d686aa44583457bbdbdeb662243e7ab29e89e5c9b40df8e33baa6b75dc47
     container_name: smartcito-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-smartcito}
-      POSTGRES_USER: ${POSTGRES_USER:-smartcito}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartcito}
+      POSTGRES_DB: ${DB_NAME:-smartcito}
+      POSTGRES_USER: ${DB_USER:-smartcito}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartcito}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - ./database/init/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartcito}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smartcito}"]
       interval: 5s
       timeout: 5s
       retries: 10

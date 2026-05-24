@@ -1,7 +1,20 @@
+x-logging: &stdout-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   citosmart:
+    build:
+      context: ./citosmart
+    image: smartcito/api-gateway:hardware
+    container_name: smartcito-citosmart-hardware
+    env_file: .env
     environment:
-      SMARTCITO_DEPLOYMENT_MODE: hardware
+      SMARTCITO_DEPLOYMENT_MODE: ${SMARTCITO_DEPLOYMENT_MODE:-hardware}
+    ports:
+      - "${APP_PORT:-8000}:8000"
     read_only: true
     tmpfs:
       - /tmp
@@ -12,31 +25,49 @@ services:
     networks:
       - backend
       - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 2G
-        limits:
-          memory: 4G
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+    logging: *stdout-logging
 
   webapp:
+    build:
+      context: ./webapp
+    image: smartcito/frontend-service:hardware
+    container_name: smartcito-webapp-hardware
+    env_file: .env
     read_only: true
     tmpfs:
       - /var/cache/nginx
       - /var/run
     security_opt:
       - no-new-privileges:true
+    ports:
+      - "${WEBAPP_PORT:-5173}:80"
     networks:
       - edge
       - backend
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-        limits:
-          memory: 512M
+    depends_on:
+      - citosmart
+    restart: unless-stopped
+    logging: *stdout-logging
 
-  camera-service:
+  camera-simulator:
+    build:
+      context: .
+      dockerfile: camera_module/Dockerfile
+    image: smartcito/camera-simulator:hardware
+    container_name: smartcito-camera-simulator
+    env_file: .env
+    environment:
+      CAMERA_SIMULATOR_PROFILE: ${CAMERA_SIMULATOR_PROFILE:-default}
+    ports:
+      - "${CAMERA_SERVICE_PORT:-8010}:8010"
     read_only: true
     tmpfs:
       - /tmp
@@ -45,14 +76,20 @@ services:
     networks:
       - backend
       - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-        limits:
-          memory: 512M
+    restart: unless-stopped
+    logging: *stdout-logging
 
-  gps-service:
+  gps-simulator:
+    build:
+      context: .
+      dockerfile: gps_module/Dockerfile
+    image: smartcito/gps-simulator:hardware
+    container_name: smartcito-gps-simulator
+    env_file: .env
+    environment:
+      GPS_SIMULATOR_PROFILE: ${GPS_SIMULATOR_PROFILE:-default}
+    ports:
+      - "${GPS_SERVICE_PORT:-8011}:8011"
     read_only: true
     tmpfs:
       - /tmp
@@ -61,46 +98,18 @@ services:
     networks:
       - backend
       - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-        limits:
-          memory: 512M
-
-  ai-service:
-    read_only: true
-    tmpfs:
-      - /tmp
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - backend
-      - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 512M
-        limits:
-          memory: 2G
-
-  security-service:
-    read_only: true
-    tmpfs:
-      - /tmp
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - backend
-      - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-        limits:
-          memory: 512M
+    restart: unless-stopped
+    logging: *stdout-logging
 
   hardware-agent:
+    build:
+      context: .
+      dockerfile: hardware/Dockerfile
+    image: smartcito/hardware-agent:hardware
+    container_name: smartcito-hardware-agent
+    env_file: .env
+    ports:
+      - "${HARDWARE_AGENT_PORT:-8014}:8014"
     read_only: true
     tmpfs:
       - /tmp
@@ -109,28 +118,102 @@ services:
     networks:
       - backend
       - monitoring
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-        limits:
-          memory: 512M
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  usb-module:
+    build:
+      context: .
+      dockerfile: hardware/usb_module/Dockerfile
+    image: smartcito/usb-module:hardware
+    container_name: smartcito-usb-module
+    env_file: .env
+    environment:
+      USB_EMULATION_ENABLED: ${USB_EMULATION_ENABLED:-true}
+    ports:
+      - "${USB_MODULE_PORT:-8015}:8015"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - monitoring
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai_models/Dockerfile
+    image: smartcito/ai-service:hardware
+    container_name: smartcito-ai-service
+    env_file: .env
+    ports:
+      - "${AI_SERVICE_PORT:-8012}:8012"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - monitoring
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  security-service:
+    build:
+      context: .
+      dockerfile: security/Dockerfile
+    image: smartcito/security-service:hardware
+    container_name: smartcito-security-service
+    env_file: .env
+    ports:
+      - "${SECURITY_SERVICE_PORT:-8013}:8013"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - monitoring
+    depends_on:
+      - citosmart
+    restart: unless-stopped
+    logging: *stdout-logging
 
   postgres:
+    image: cgr.dev/chainguard/postgres:latest@sha256:34a4d686aa44583457bbdbdeb662243e7ab29e89e5c9b40df8e33baa6b75dc47
+    container_name: smartcito-postgres-hardware
+    environment:
+      POSTGRES_DB: ${DB_NAME:-smartcito}
+      POSTGRES_USER: ${DB_USER:-smartcito}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartcito}
+    ports:
+      - "${DB_PORT:-5432}:5432"
     volumes:
+      - ./database/init/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
       - pgdata:/var/lib/postgresql/data
       - pgbackup:/backups
     networks:
       - backend
-    deploy:
-      resources:
-        reservations:
-          memory: 2G
-        limits:
-          memory: 4G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smartcito}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *stdout-logging
 
   redis:
+    image: redis:7-alpine
+    container_name: smartcito-redis-hardware
     command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     read_only: true
     tmpfs:
       - /tmp
@@ -138,27 +221,41 @@ services:
       - redisdata:/data
     networks:
       - backend
+    restart: unless-stopped
+    logging: *stdout-logging
 
   kafka:
+    image: bitnami/kafka:3.7
+    container_name: smartcito-kafka-hardware
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
     networks:
       - backend
     volumes:
       - kafkadata:/bitnami/kafka
-    deploy:
-      resources:
-        reservations:
-          memory: 2G
-        limits:
-          memory: 4G
+    restart: unless-stopped
+    logging: *stdout-logging
 
   mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: smartcito-mqtt-hardware
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     networks:
       - backend
-
-  dash:
-    networks:
-      - backend
-      - monitoring
+    restart: unless-stopped
+    logging: *stdout-logging
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -168,11 +265,12 @@ services:
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
       - monitoring
       - backend
     restart: unless-stopped
+    logging: *stdout-logging
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -183,13 +281,15 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     networks:
       - monitoring
     restart: unless-stopped
+    logging: *stdout-logging
 
 volumes:
   citosmart_data:
+  pgdata:
   pgbackup:
   redisdata:
   kafkadata:

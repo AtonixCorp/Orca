@@ -1,0 +1,19 @@
+auth_url      = "https://openstack.example.com:5000/v3"
+project_name  = "smartcito"
+username      = "smartcito-admin"
+password      = "change-me"
+region        = "RegionOne"
+
+network_name = "smartcito-net"
+subnet_cidr  = "10.42.0.0/24"
+
+image_name = "ubuntu-22.04"
+key_pair   = "smartcito-keypair"
+
+controller_flavor = "m1.large"
+compute_flavor    = "g1.xlarge"
+storage_flavor    = "m1.xlarge"
+
+controller_count = 1
+compute_count    = 2
+storage_count    = 1

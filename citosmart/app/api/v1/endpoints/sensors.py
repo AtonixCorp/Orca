@@ -17,9 +17,12 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_role
+from app.db.session import get_session
 from app.schemas.sensor import SensorReadingIn, SensorReadingOut
+from app.services.event_pipeline import event_pipeline_service
 from app.services.ingestion import ingestion_service
 
 logger = logging.getLogger(__name__)
@@ -33,7 +36,11 @@ router = APIRouter()
     dependencies=[Depends(require_role("operator"))],
     summary="Ingest a single sensor reading",
 )
-async def ingest_reading(reading: SensorReadingIn, request: Request) -> SensorReadingOut:
+async def ingest_reading(
+    reading: SensorReadingIn,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> SensorReadingOut:
     """Validate the reading, store it, and (best-effort) publish to Kafka.
 
     The Kafka publisher is only attached to `app.state.kafka` when the
@@ -43,12 +50,20 @@ async def ingest_reading(reading: SensorReadingIn, request: Request) -> SensorRe
     """
     record = ingestion_service.ingest(reading)
     kafka = getattr(request.app.state, "kafka", None)
-    if kafka is not None:
-        try:
-            await kafka.publish_reading(record)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Kafka publish failed for %s: %s", record.sensor_id, exc)
-    return record
+    try:
+        return await event_pipeline_service.process_sensor_reading(
+            session,
+            reading=reading,
+            publisher=kafka,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Event pipeline failed for %s: %s", record.sensor_id, exc)
+        if kafka is not None:
+            try:
+                await kafka.publish_reading(record)
+            except Exception as kafka_exc:  # noqa: BLE001
+                logger.warning("Kafka publish failed for %s: %s", record.sensor_id, kafka_exc)
+        return record
 
 
 @router.get(

@@ -1,139 +1,89 @@
-image: node:20-bookworm
-
 stages:
-  - prepare
   - build
   - test
-  - scan
   - package
-  - deploy
-  - audit
+  - deploy-staging
+  - deploy-production
 
 variables:
   DOCKER_TLS_CERTDIR: "/certs"
-  REQUIRED_MODULES: "ai iot gps camera map security crypto containers openstack debian tests k8s docs"
+  IMAGE_TAG: "$CI_COMMIT_SHA"
 
-include:
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/Secret-Detection.gitlab-ci.yml
-  - template: Security/Dependency-Scanning.gitlab-ci.yml
-
-prepare:validate-repository:
-  stage: prepare
-  script:
-    - apt-get update && apt-get install -y yamllint jq
-    - yamllint .gitlab-ci.yml
-    - |
-      for dir in $REQUIRED_MODULES; do
-        test -d "$dir" || { echo "Missing required folder: $dir"; exit 1; }
-      done
-    - |
-      for dir in ai iot gps camera map security crypto; do
-        test -f "$dir/README.md" || { echo "Missing $dir/README.md"; exit 1; }
-        test -d "$dir/tests" || { echo "Missing $dir/tests"; exit 1; }
-        test -f "$dir/Dockerfile" -o -f "$dir/Containerfile" || { echo "Missing $dir Dockerfile/Containerfile"; exit 1; }
-        test -f "$dir/SECURITY.md" || { echo "Missing $dir/SECURITY.md"; exit 1; }
-      done
-
-prepare:dependencies:
-  stage: prepare
-  script:
-    - |
-      if [ -f package-lock.json ]; then
-        npm ci
-      elif [ -f package.json ]; then
-        npm install
-      else
-        echo "No root package.json found; skipping npm install"
-      fi
-  artifacts:
-    paths:
-      - node_modules/
-    expire_in: 1 hour
-    when: on_success
-
-build:containers:
+build:docker-images:
   stage: build
   image: docker:27
   services:
     - docker:27-dind
   script:
-    - |
-      for dir in ai iot gps camera map security crypto containers; do
-        file=""
-        [ -f "$dir/Dockerfile" ] && file="$dir/Dockerfile"
-        [ -f "$dir/Containerfile" ] && file="$dir/Containerfile"
+    - docker build --pull -t "$CI_REGISTRY_IMAGE/citosmart:$IMAGE_TAG" ./citosmart
+    - docker build --pull -t "$CI_REGISTRY_IMAGE/webapp:$IMAGE_TAG" ./webapp
+    - docker build --pull -f camera_module/Dockerfile -t "$CI_REGISTRY_IMAGE/camera-service:$IMAGE_TAG" .
+    - docker build --pull -f gps_module/Dockerfile -t "$CI_REGISTRY_IMAGE/gps-service:$IMAGE_TAG" .
+    - docker build --pull -f ai_models/Dockerfile -t "$CI_REGISTRY_IMAGE/ai-service:$IMAGE_TAG" .
+    - docker build --pull -f security/Dockerfile -t "$CI_REGISTRY_IMAGE/security-service:$IMAGE_TAG" .
+    - docker build --pull -f hardware/Dockerfile -t "$CI_REGISTRY_IMAGE/hardware-agent:$IMAGE_TAG" .
+    - docker build --pull -f hardware/usb_module/Dockerfile -t "$CI_REGISTRY_IMAGE/usb-module:$IMAGE_TAG" .
+    - docker build --pull -f ingestion/Dockerfile -t "$CI_REGISTRY_IMAGE/ingestion-kafka-producer:$IMAGE_TAG" .
+    - docker build --pull -f ingestion/Dockerfile -t "$CI_REGISTRY_IMAGE/ingestion-spark:$IMAGE_TAG" .
 
-        if [ -n "$file" ]; then
-          echo "Building $dir from $file"
-          docker build --pull -f "$file" -t "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA" "$dir"
-        else
-          echo "No container file in $dir"
-          exit 1
-        fi
-      done
-
-test:modules:
+test:citosmart:
   stage: test
+  image: python:3.11-slim
+  before_script:
+    - pip install -r citosmart/requirements-dev.txt black flake8 mypy
   script:
-    - |
-      for dir in ai iot gps camera map security crypto; do
-        echo "Testing $dir"
+    - cd citosmart
+    - black --check .
+    - flake8 .
+    - mypy app
+    - pytest
 
-        if [ -f "$dir/package.json" ]; then
-          cd "$dir"
-          npm install
-          npm test
-          cd -
-        elif find "$dir/tests" -type f | grep -q .; then
-          echo "Tests exist for $dir, but no runner was detected"
-        else
-          echo "No tests found for $dir"
-          exit 1
-        fi
-      done
-
-test:dashboard-build:
+test:python-services:
   stage: test
+  image: python:3.11-slim
+  before_script:
+    - pip install black flake8 mypy pytest httpx
+    - pip install -r citosmart/requirements.txt
+    - pip install -r ai_models/requirements.txt
+    - pip install -r camera_module/requirements.txt
+    - pip install -r gps_module/requirements.txt
+    - pip install -r ingestion/requirements.txt
+    - pip install -r security/requirements.txt
+    - pip install -r hardware/requirements.txt
   script:
-    - |
-      if [ -f package.json ]; then
-        npm run build --if-present
-        npm test --if-present
-      else
-        echo "No dashboard package.json found; skipping dashboard build"
-      fi
+    - black --check ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+    - flake8 ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+    - mypy --ignore-missing-imports ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+    - PYTHONPATH="$CI_PROJECT_DIR:$CI_PROJECT_DIR/citosmart" pytest ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
 
-scan:crypto-checks:
-  stage: scan
+test:security-root:
+  stage: test
+  image: python:3.11-slim
+  before_script:
+    - pip install pytest pyyaml
   script:
-    - |
-      grep -RInE "md5|sha1|des|rc4|ecb" crypto security && {
-        echo "Weak cryptography pattern detected"
-        exit 1
-      } || echo "Cryptography scan passed"
+    - pytest tests/security -v
 
-scan:container-policy:
-  stage: scan
+test:webapp:
+  stage: test
+  image: node:20-bookworm
   script:
-    - |
-      for file in $(find ai iot gps camera map security crypto containers -name Dockerfile -o -name Containerfile); do
-        grep -Eiq "^FROM .*(debian|bookworm|bullseye|trixie)" "$file" || {
-          echo "$file is not Debian-based"
-          exit 1
-        }
-      done
+    - cd webapp
+    - npm ci
+    - npm run lint
+    - npm run format:check
+    - npm run test
+    - npm run build
 
-scan:dast:
-  stage: scan
+test:map:
+  stage: test
+  image: node:20-bookworm
   script:
-    - |
-      if [ -z "$DAST_TARGET_URL" ]; then
-        echo "Set DAST_TARGET_URL to enable DAST scanning"
-        exit 1
-      fi
-      echo "DAST target: $DAST_TARGET_URL"
-  allow_failure: false
+    - cd map
+    - npm install --no-audit --no-fund
+    - npm run lint
+    - npm run format:check
+    - npm test
 
 package:push-images:
   stage: package
@@ -142,61 +92,62 @@ package:push-images:
     - docker:27-dind
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-    - |
-      for dir in ai iot gps camera map security crypto containers; do
-        file=""
-        [ -f "$dir/Dockerfile" ] && file="$dir/Dockerfile"
-        [ -f "$dir/Containerfile" ] && file="$dir/Containerfile"
+    - docker build --pull -t "$CI_REGISTRY_IMAGE/citosmart:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/citosmart:latest" ./citosmart
+    - docker build --pull -t "$CI_REGISTRY_IMAGE/webapp:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/webapp:latest" ./webapp
+    - docker build --pull -f camera_module/Dockerfile -t "$CI_REGISTRY_IMAGE/camera-service:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/camera-service:latest" .
+    - docker build --pull -f gps_module/Dockerfile -t "$CI_REGISTRY_IMAGE/gps-service:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/gps-service:latest" .
+    - docker build --pull -f ai_models/Dockerfile -t "$CI_REGISTRY_IMAGE/ai-service:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/ai-service:latest" .
+    - docker build --pull -f security/Dockerfile -t "$CI_REGISTRY_IMAGE/security-service:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/security-service:latest" .
+    - docker build --pull -f hardware/Dockerfile -t "$CI_REGISTRY_IMAGE/hardware-agent:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/hardware-agent:latest" .
+    - docker build --pull -f hardware/usb_module/Dockerfile -t "$CI_REGISTRY_IMAGE/usb-module:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/usb-module:latest" .
+    - docker build --pull -f ingestion/Dockerfile -t "$CI_REGISTRY_IMAGE/ingestion-kafka-producer:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/ingestion-kafka-producer:latest" .
+    - docker build --pull -f ingestion/Dockerfile -t "$CI_REGISTRY_IMAGE/ingestion-spark:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE/ingestion-spark:latest" .
+    - docker push "$CI_REGISTRY_IMAGE/citosmart:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/citosmart:latest"
+    - docker push "$CI_REGISTRY_IMAGE/webapp:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/webapp:latest"
+    - docker push "$CI_REGISTRY_IMAGE/camera-service:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/camera-service:latest"
+    - docker push "$CI_REGISTRY_IMAGE/gps-service:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/gps-service:latest"
+    - docker push "$CI_REGISTRY_IMAGE/ai-service:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/ai-service:latest"
+    - docker push "$CI_REGISTRY_IMAGE/security-service:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/security-service:latest"
+    - docker push "$CI_REGISTRY_IMAGE/hardware-agent:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/hardware-agent:latest"
+    - docker push "$CI_REGISTRY_IMAGE/usb-module:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/usb-module:latest"
+    - docker push "$CI_REGISTRY_IMAGE/ingestion-kafka-producer:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/ingestion-kafka-producer:latest"
+    - docker push "$CI_REGISTRY_IMAGE/ingestion-spark:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE/ingestion-spark:latest"
 
-        docker build --pull -f "$file" -t "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA" -t "$CI_REGISTRY_IMAGE/$dir:latest" "$dir"
-        docker push "$CI_REGISTRY_IMAGE/$dir:$CI_COMMIT_SHA"
-        docker push "$CI_REGISTRY_IMAGE/$dir:latest"
-      done
-
-deploy:kubernetes:
-  stage: deploy
-  image: bitnami/kubectl:latest
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  script:
-    - test -n "$KUBE_CONFIG" || { echo "Missing KUBE_CONFIG variable"; exit 1; }
-    - mkdir -p ~/.kube
-    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-    - kubectl apply -f k8s/
-
-deploy:openstack:
-  stage: deploy
+deploy:staging:
+  stage: deploy-staging
   image: debian:bookworm
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+  before_script:
+    - apt-get update && apt-get install -y openssh-client bash
+    - mkdir -p ~/.ssh
+    - printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
   script:
-    - apt-get update && apt-get install -y python3-pip
-    - pip3 install --break-system-packages python-openstackclient
-    - test -n "$OS_AUTH_URL" || { echo "Missing OpenStack environment variables"; exit 1; }
-    - openstack server list
+    - IMAGE_REGISTRY="$CI_REGISTRY_IMAGE" IMAGE_TAG="$CI_COMMIT_SHA" APP_ENV=staging DEPLOY_ENVIRONMENT=staging bash infra/deploy/deploy_remote.sh staging
 
-audit:atp-ledger:
-  stage: audit
+deploy:production:
+  stage: deploy-production
+  image: debian:bookworm
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
+  before_script:
+    - apt-get update && apt-get install -y openssh-client bash
+    - mkdir -p ~/.ssh
+    - printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
   script:
-    - mkdir -p audit
-    - |
-      cat > audit/atp-ledger-${CI_COMMIT_SHA}.json <<EOF
-      {
-        "project": "$CI_PROJECT_PATH",
-        "commit": "$CI_COMMIT_SHA",
-        "branch": "$CI_COMMIT_BRANCH",
-        "author": "$GITLAB_USER_LOGIN",
-        "pipeline": "$CI_PIPELINE_ID",
-        "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-        "registry": "$CI_REGISTRY_IMAGE"
-      }
-      EOF
-    - cat audit/atp-ledger-${CI_COMMIT_SHA}.json
-  artifacts:
-    paths:
-      - audit/
-    expire_in: 1 year
+    - IMAGE_REGISTRY="$CI_REGISTRY_IMAGE" IMAGE_TAG="$CI_COMMIT_SHA" APP_ENV=production DEPLOY_ENVIRONMENT=production bash infra/deploy/deploy_remote.sh production

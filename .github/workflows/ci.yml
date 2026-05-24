@@ -1,15 +1,7 @@
-# ============================================================================
-# File: .github/workflows/ci.yml
-# Purpose:
-#   Continuous Integration for SmartCito.
-#     - Lints + tests the Python citosmart.
-#     - Lints + builds the React webapp.
-#   Triggered on every PR and on pushes to `main`.
-# ============================================================================
-
 name: CI
 
 on:
+  workflow_call:
   push:
     branches:
       - main
@@ -39,20 +31,72 @@ jobs:
           cache-dependency-path: citosmart/requirements-dev.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: pip install -r requirements-dev.txt black flake8 mypy
 
-      - name: Ruff
-        run: ruff check .
-
-      - name: Black (check only)
+      - name: Black
         run: black --check .
+
+      - name: Flake8
+        run: flake8 .
 
       - name: Mypy
         run: mypy app
-        continue-on-error: true   # ratchet up to required once codebase grows
 
       - name: Pytest
         run: pytest
+
+  python-services:
+    name: Unit Tests and Quality (python services)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install black flake8 mypy pytest httpx
+          pip install -r citosmart/requirements.txt
+          pip install -r ai_models/requirements.txt
+          pip install -r camera_module/requirements.txt
+          pip install -r gps_module/requirements.txt
+          pip install -r ingestion/requirements.txt
+          pip install -r security/requirements.txt
+          pip install -r hardware/requirements.txt
+
+      - name: Black
+        run: black --check ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+
+      - name: Flake8
+        run: flake8 ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+
+      - name: Mypy
+        run: mypy --ignore-missing-imports ai_models camera_module gps_module ingestion security/service.py hardware/service.py ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+
+      - name: Pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/citosmart
+        run: pytest ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
+
+  security-tests:
+    name: Root Security Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
+
+      - name: Run security policy tests
+        run: pytest tests/security -v
 
   webapp:
     name: Unit Tests and Quality (webapp)
@@ -75,10 +119,38 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
+
+      - name: Prettier
+        run: npm run format:check
 
       - name: Test
         run: npm run test
 
       - name: Build
         run: npm run build
+
+  map:
+    name: Unit Tests and Quality (map)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: map
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: Test
+        run: npm test

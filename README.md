@@ -155,9 +155,29 @@ SmartCito targets compatibility with:
 
 ## CI/CD
 
-SmartCito uses a multi-stage GitLab pipeline: **prepare → build → test → scan → package → deploy → audit**.
+`.env.example` is the single source of truth for local and deployment
+configuration. Copy it to `.env` for local development, keep placeholder values
+only in version control, and inject the same variables as runtime environment
+values in production.
 
-See [`.gitlab-ci.yml`](.gitlab-ci.yml).
+Important environment variables include:
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `KAFKA_BROKER_URL` or `MESSAGE_BUS_URL`
+- `OBJECT_STORAGE_ENDPOINT`, `OBJECT_STORAGE_BUCKET`
+- `AUTH_JWT_SECRET`, `AUTH_ISSUER`, `AUTH_AUDIENCE`
+- `OPENSTACK_AUTH_URL`, `OPENSTACK_PROJECT`, `OPENSTACK_USER`, `OPENSTACK_PASSWORD`
+
+SmartCito now standardizes CI/CD across GitHub Actions and GitLab around these
+stages: **build → test → package → deploy-staging → deploy-production**.
+
+- CI builds one Docker image per service tagged with the commit SHA.
+- CI runs backend, frontend, and service-specific test suites.
+- CD deploys to OpenStack VMs through scripts in `infra/deploy/`.
+
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml),
+[`.github/workflows/full-stack-cicd.yml`](.github/workflows/full-stack-cicd.yml),
+[`.gitlab-ci.yml`](.gitlab-ci.yml), and [`infra/deploy/README.md`](infra/deploy/README.md).
 
 ---
 

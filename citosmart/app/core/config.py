@@ -22,7 +22,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, computed_field
+from pydantic import AliasChoices, Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,25 +46,59 @@ class Settings(BaseSettings):
     # ----- Security -----
     secret_key: str = Field(
         default="dev-only-change-me",
+        validation_alias=AliasChoices("AUTH_JWT_SECRET", "SECRET_KEY"),
         description="HMAC key for JWT signing. MUST be overridden in production.",
+    )
+    auth_issuer: str = Field(
+        default="smartcito.local",
+        validation_alias=AliasChoices("AUTH_ISSUER"),
+    )
+    auth_audience: str = Field(
+        default="smartcito-clients",
+        validation_alias=AliasChoices("AUTH_AUDIENCE"),
     )
     jwt_algorithm: str = "HS256"
     jwt_access_token_expires_minutes: int = 60
     cors_allowed_origins: str = "http://localhost:5173"
 
     # ----- Database -----
-    postgres_host: str = "postgres"
-    postgres_port: int = 5432
-    postgres_db: str = "smartcito"
-    postgres_user: str = "smartcito"
-    postgres_password: str = "smartcito"
+    postgres_host: str = Field(
+        default="postgres",
+        validation_alias=AliasChoices("DB_HOST", "POSTGRES_HOST"),
+    )
+    postgres_port: int = Field(
+        default=5432,
+        validation_alias=AliasChoices("DB_PORT", "POSTGRES_PORT"),
+    )
+    postgres_db: str = Field(
+        default="smartcito",
+        validation_alias=AliasChoices("DB_NAME", "POSTGRES_DB"),
+    )
+    postgres_user: str = Field(
+        default="smartcito",
+        validation_alias=AliasChoices("DB_USER", "POSTGRES_USER"),
+    )
+    postgres_password: str = Field(
+        default="smartcito",
+        validation_alias=AliasChoices("DB_PASSWORD", "POSTGRES_PASSWORD"),
+    )
 
     # ----- Cache -----
     redis_url: str = "redis://redis:6379/0"
 
     # ----- Streaming (Kafka) -----
-    kafka_bootstrap_servers: str = "kafka:9092"
+    kafka_bootstrap_servers: str = Field(
+        default="kafka:9092",
+        validation_alias=AliasChoices(
+            "KAFKA_BROKER_URL",
+            "MESSAGE_BUS_URL",
+            "KAFKA_BOOTSTRAP_SERVERS",
+        ),
+    )
     kafka_sensor_topic: str = "smartcito.sensors.raw"
+    kafka_raw_events_topic: str = "smartcito.events.raw"
+    kafka_clean_events_topic: str = "smartcito.events.clean"
+    kafka_alerts_topic: str = "smartcito.alerts"
     kafka_publisher_enabled: bool = False
 
     # ----- IoT ingestion (MQTT) -----
@@ -77,6 +111,18 @@ class Settings(BaseSettings):
     # ----- Observability -----
     audit_log_enabled: bool = True
     otel_exporter_otlp_endpoint: str | None = None
+
+    # ----- AI / object storage -----
+    ai_models_url: str = "http://ai-service:8012"
+    object_storage_endpoint: str = "file://./data/object_storage"
+    object_storage_bucket: str = "smartcito-artifacts"
+
+    # ----- Infra / deploy -----
+    openstack_auth_url: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_AUTH_URL"))
+    openstack_project: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_PROJECT"))
+    openstack_user: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_USER"))
+    openstack_password: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_PASSWORD"))
+    openstack_region: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_REGION"))
 
     # ---------- Computed / convenience helpers ----------
 

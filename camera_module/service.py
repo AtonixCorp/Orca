@@ -9,10 +9,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
 from camera_module.drivers.rtsp_driver import build_rtsp_stream_config
+
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 app = FastAPI(title="SmartCito Camera Module")
 

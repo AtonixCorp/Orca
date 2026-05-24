@@ -13,6 +13,8 @@ from typing import Any
 
 from kafka import KafkaProducer
 
+from ingestion.config_loader import load_topics
+
 
 class JsonProducer:
     """Kafka JSON producer wrapper with a tiny publish surface."""
@@ -27,3 +29,7 @@ class JsonProducer:
     def publish(self, payload: dict[str, Any]) -> None:
         self._producer.send(self._topic, payload)
         self._producer.flush()
+
+
+def build_shared_topic_map() -> dict[str, str]:
+    return load_topics()

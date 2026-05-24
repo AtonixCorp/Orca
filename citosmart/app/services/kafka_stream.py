@@ -79,6 +79,12 @@ class KafkaPublisher:
         key = reading.sensor_id.encode("utf-8")
         await self._producer.send_and_wait(self._topic, reading.model_dump(), key=key)
 
+    async def publish_event(self, payload: dict[str, object], *, topic: str) -> None:
+        if self._producer is None:
+            raise RuntimeError("KafkaPublisher.start() must be called first")
+        key = str(payload.get("event_id") or payload.get("id") or "smartcito").encode("utf-8")
+        await self._producer.send_and_wait(topic, payload, key=key)
+
 
 async def consume_sensor_stream(
     group_id: str,

@@ -1,10 +1,3 @@
-# ============================================================================
-# File: .github/workflows/full-stack-cicd.yml
-# Purpose:
-#   Full-stack CI/CD pipeline that validates SmartCito's software containers,
-#   hardware simulation checks, traceability logs, security posture, and infra.
-# ============================================================================
-
 name: Full Stack CI/CD
 
 on:
@@ -12,7 +5,6 @@ on:
     branches:
       - main
       - develop
-      - feature/**
       - release/**
       - hotfix/**
   pull_request:
@@ -21,281 +13,144 @@ on:
       - develop
   workflow_dispatch:
     inputs:
-      hardware_mode:
-        description: Live hardware validation mode
-        required: true
-        default: live
-        type: choice
-        options:
-          - live
+      deploy_production:
+        description: Deploy production after packaging
+        required: false
+        default: false
+        type: boolean
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/smartcito
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  traceability:
-    name: Traceability audit
+  test-and-quality:
+    name: Reuse CI checks
+    uses: ./.github/workflows/ci.yml
+
+  package-images:
+    name: Package Docker images
     runs-on: ubuntu-latest
+    needs: test-and-quality
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: citosmart
+            context: ./citosmart
+            dockerfile: ./citosmart/Dockerfile
+          - image: webapp
+            context: ./webapp
+            dockerfile: ./webapp/Dockerfile
+          - image: camera-service
+            context: .
+            dockerfile: ./camera_module/Dockerfile
+          - image: gps-service
+            context: .
+            dockerfile: ./gps_module/Dockerfile
+          - image: ai-service
+            context: .
+            dockerfile: ./ai_models/Dockerfile
+          - image: security-service
+            context: .
+            dockerfile: ./security/Dockerfile
+          - image: hardware-agent
+            context: .
+            dockerfile: ./hardware/Dockerfile
+          - image: usb-module
+            context: .
+            dockerfile: ./hardware/usb_module/Dockerfile
+          - image: ingestion-kafka-producer
+            context: .
+            dockerfile: ./ingestion/Dockerfile
+          - image: ingestion-spark
+            context: .
+            dockerfile: ./ingestion/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          python-version: "3.11"
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install backend runtime dependencies
-        run: python3 -m pip install -r citosmart/requirements.txt
-
-      - name: Record bootstrap audit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/record_ci_audit.py bootstrap
-
-      - name: Encrypt bootstrap audit artifact
-        run: python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.bootstrap.quantum.json
-
-      - name: Upload audit log
-        uses: actions/upload-artifact@v4
+      - name: Build and optionally push
+        uses: docker/build-push-action@v6
         with:
-          name: ci-audit-bootstrap
-          path: logs/ci_audit.bootstrap.quantum.json
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.deploy_production) }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:latest
 
-  build-and-validate:
-    name: Build containers and manifests
+  deploy-staging:
+    name: Deploy staging
     runs-on: ubuntu-latest
-    needs: traceability
+    needs: package-images
+    if: github.ref == 'refs/heads/main'
+    environment: staging
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate repo structure
-        run: python3 scripts/ci/validate_repo_structure.py
+      - name: Install SSH client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
 
-      - name: Validate compose files
+      - name: Configure SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          docker compose -f docker-compose.yml config
-          docker compose -f docker-compose.yml -f docker-compose.hardware.yml config
-          docker compose -f docker-compose.services.yml config
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
-      - name: Build service containers
-        run: |
-          docker compose -f docker-compose.yml build \
-            citosmart webapp camera-service gps-service ai-service security-service hardware-agent
+      - name: Deploy staging stack
+        env:
+          DEPLOY_ENVIRONMENT: staging
+          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+          IMAGE_REGISTRY: ${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: ${{ github.sha }}
+          APP_ENV: staging
+        run: bash infra/deploy/deploy_remote.sh staging
 
-      - name: Validate Kubernetes manifests
-        run: |
-          python3 -m pip install PyYAML
-          python3 - <<'PY'
-          from pathlib import Path
-          import yaml
-
-          for manifest in sorted(Path("infra/kubernetes").glob("*.yaml")):
-              docs = list(yaml.safe_load_all(manifest.read_text()))
-              if not docs:
-                  raise SystemExit(f"{manifest} is empty")
-          print("Kubernetes manifests validated")
-          PY
-
-  hardware-validation:
-    name: Hardware validation
+  deploy-production:
+    name: Deploy production
     runs-on: ubuntu-latest
-    needs: build-and-validate
-    env:
-      SMARTCITO_HARDWARE_CI_MODE: simulation
+    needs: package-images
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.deploy_production)
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: citosmart/requirements-dev.txt
+      - name: Install SSH client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
 
-      - name: Install test dependencies
-        run: python3 -m pip install -r citosmart/requirements-dev.txt
-
-      - name: Run hardware tests
-        run: |
-          pytest \
-            hardware/compute/test_compute_nodes.py \
-            hardware/storage/test_storage_arrays.py \
-            hardware/networking/test_network_transmission.py \
-            hardware/security/test_hsm_integrity.py \
-            hardware/racks/test_power_distribution.py \
-            --junitxml=logs/hardware-validation.xml
-
-      - name: Record hardware audit
+      - name: Configure SSH key
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/record_ci_audit.py hardware-validation
-
-      - name: Encrypt hardware audit artifact
-        run: python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.hardware.quantum.json
-
-      - name: Upload hardware artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hardware-validation
-          path: |
-            logs/ci_audit.hardware.quantum.json
-            logs/hardware-validation.xml
-            logs/hardware_results/*.json
-
-  hardware-live-validation:
-    name: Authorized live hardware validation
-    if: github.event_name == 'workflow_dispatch' && inputs.hardware_mode == 'live'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Enforce hardware trigger RBAC
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          python3 - <<'PY'
-          import os
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
-          actor = os.getenv("GITHUB_ACTOR", "")
-          owner = os.getenv("GITHUB_REPOSITORY_OWNER", "")
-          allowed = set()
-          if owner:
-              allowed.add(owner)
-          if actor not in allowed:
-              raise SystemExit(
-                  f"Actor '{actor}' is not authorized for live hardware validation. "
-                  "Only the repository owner may trigger this workflow by default."
-              )
-          print(f"Authorized actor: {actor}")
-          PY
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: citosmart/requirements-dev.txt
-
-      - name: Install test dependencies
-        run: python3 -m pip install -r citosmart/requirements-dev.txt
-
-      - name: Run live hardware tests
+      - name: Deploy production stack
         env:
-          SMARTCITO_HARDWARE_CI_MODE: live
-        run: |
-          pytest \
-            hardware/compute/test_compute_nodes.py \
-            hardware/storage/test_storage_arrays.py \
-            hardware/networking/test_network_transmission.py \
-            hardware/security/test_hsm_integrity.py \
-            hardware/racks/test_power_distribution.py \
-            --junitxml=logs/hardware-live-validation.xml
-
-      - name: Record live hardware audit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/record_ci_audit.py hardware-live-validation
-
-      - name: Encrypt live hardware audit artifact
-        run: python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.hardware-live.quantum.json
-
-      - name: Upload live hardware artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hardware-live-validation
-          path: |
-            logs/ci_audit.hardware-live.quantum.json
-            logs/hardware-live-validation.xml
-            logs/hardware_results/*.json
-
-  integration-and-security:
-    name: Integration, security, and performance
-    runs-on: ubuntu-latest
-    needs: hardware-validation
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: citosmart/requirements-dev.txt
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: webapp/package-lock.json
-
-      - name: Install backend dependencies
-        run: python3 -m pip install -r citosmart/requirements-dev.txt bandit pip-audit
-
-      - name: Install webapp dependencies
-        working-directory: webapp
-        run: npm install --no-audit --no-fund
-
-      - name: Run backend integration tests
-        working-directory: citosmart
-        run: pytest tests/test_cameras.py tests/test_camera_drivers.py tests/test_quantum.py -q
-
-      - name: Run webapp tests
-        working-directory: webapp
-        run: npm test -- --watch=false
-
-      - name: Security scan
-        run: |
-          cd citosmart
-          bandit -r app -x tests
-          pip-audit -r requirements.txt
-          cd ..
-          python3 scripts/ci/performance_smoke.py
-
-      - name: Install Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
-
-      - name: Trivy security configuration scan
-        run: trivy config --exit-code 1 --severity HIGH,CRITICAL .
-
-      - name: Record integration audit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/record_ci_audit.py integration-security
-
-      - name: Encrypt integration audit artifact
-        run: python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.integration.quantum.json
-
-      - name: Upload integration artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-security
-          path: |
-            logs/ci_audit.integration.quantum.json
-            logs/performance_smoke.json
-
-  deploy-openstack:
-    name: Deploy to OpenStack
-    runs-on: ubuntu-latest
-    needs: integration-and-security
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform validate
-        working-directory: infra/terraform
-        run: |
-          terraform init -backend=false
-          terraform validate
-
-      - name: Record deploy audit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/record_ci_audit.py deploy
-
-      - name: Encrypt deploy audit artifact
-        run: python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.deploy.quantum.json
+          DEPLOY_ENVIRONMENT: production
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PRODUCTION_DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.PRODUCTION_DEPLOY_PATH }}
+          IMAGE_REGISTRY: ${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: ${{ github.sha }}
+          APP_ENV: production
+        run: bash infra/deploy/deploy_remote.sh production
