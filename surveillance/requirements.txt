@@ -5,5 +5,10 @@ python-dotenv==1.0.1
 SQLAlchemy==2.0.36
 psycopg[binary]==3.2.3
 pymavlink==2.4.43
+geopandas==1.0.1
+shapely==2.0.6
+folium==0.18.0
+pyproj==3.6.1
+networkx==3.4.2
 dronekit
 mavsdk

@@ -35,6 +35,16 @@ interface ZoneOverlay {
   height: number;
 }
 
+interface GeoJsonFeatureCollection {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    id?: string;
+    geometry: { type: string; coordinates: unknown };
+    properties?: Record<string, unknown>;
+  }>;
+}
+
 interface MapPoint {
   latitude: number;
   longitude: number;
@@ -86,6 +96,7 @@ export default function CommandCenterMap({
   mode = "2d",
   sceneOverview,
   cameraCorridors = [],
+  geoJsonLayers = [],
 }: {
   assets: AssetItem[];
   threatAlerts: ThreatAlert[];
@@ -97,6 +108,7 @@ export default function CommandCenterMap({
   mode?: MapMode;
   sceneOverview?: SceneOverview | null;
   cameraCorridors?: CameraCorridor[];
+  geoJsonLayers?: Array<{ id: string; data: GeoJsonFeatureCollection | { type: string; coordinates: unknown } | null; color?: string }>;
 }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const sceneElementRef = useRef<HTMLDivElement | null>(null);
@@ -180,6 +192,41 @@ export default function CommandCenterMap({
         .addTo(overlays);
     });
 
+    geoJsonLayers.forEach((layer) => {
+      if (!layer.data) {
+        return;
+      }
+
+      if ((layer.data as GeoJsonFeatureCollection).type === "FeatureCollection") {
+        L.geoJSON(layer.data as GeoJsonFeatureCollection, {
+          style: {
+            color: layer.color ?? "#57c7d4",
+            weight: 2,
+            fillOpacity: 0.14,
+          },
+          pointToLayer: (_feature, latlng) => L.circleMarker(latlng, {
+            radius: 5,
+            color: layer.color ?? "#57c7d4",
+            weight: 2,
+            fillOpacity: 0.7,
+          }),
+          onEachFeature: (feature, layerInstance) => {
+            const label = typeof feature.properties?.name === "string" ? feature.properties.name : layer.id;
+            layerInstance.bindTooltip(label);
+          },
+        }).addTo(overlays);
+        return;
+      }
+
+      L.geoJSON({ type: "Feature", geometry: layer.data as { type: string; coordinates: unknown }, properties: { name: layer.id } }, {
+        style: {
+          color: layer.color ?? "#f1c96b",
+          weight: 2,
+          fillOpacity: 0.08,
+        },
+      }).addTo(overlays);
+    });
+
     cameraCorridors.forEach((corridor) => {
       L.polygon(corridor.polygon, {
         color: mode === "street" ? "#f1c96b" : "#ffd776",
@@ -226,13 +273,21 @@ export default function CommandCenterMap({
       }).addTo(group);
     }
 
+    const overlayBounds = overlays.getBounds();
     if (bounds.length > 0) {
-      mapRef.current.fitBounds(L.latLngBounds(bounds.map((asset) => [asset.latitude, asset.longitude])), {
+      const assetBounds = L.latLngBounds(bounds.map((asset) => [asset.latitude, asset.longitude]));
+      const nextBounds = overlayBounds.isValid() ? assetBounds.extend(overlayBounds) : assetBounds;
+      mapRef.current.fitBounds(nextBounds, {
+        maxZoom: 15,
+        padding: [36, 36],
+      });
+    } else if (overlayBounds.isValid()) {
+      mapRef.current.fitBounds(overlayBounds, {
         maxZoom: 15,
         padding: [36, 36],
       });
     }
-  }, [assets, bounds, cameraCorridors, drawPoints, mode, onSelectAsset, selectedAssetId, threatAlerts, zones]);
+  }, [assets, bounds, cameraCorridors, drawPoints, geoJsonLayers, mode, onSelectAsset, selectedAssetId, threatAlerts, zones]);
 
   useEffect(() => {
     if (mode !== "3d" || import.meta.env.MODE === "test" || !sceneElementRef.current) {

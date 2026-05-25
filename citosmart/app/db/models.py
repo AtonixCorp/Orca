@@ -19,9 +19,23 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from geoalchemy2 import Geometry
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 from app.db.base import Base
+
+
+class PostGISGeometry(TypeDecorator):
+    """Use native PostGIS geometry on PostgreSQL and JSON elsewhere."""
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):  # type: ignore[override]
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(Geometry(geometry_type="GEOMETRY", srid=4326))
+        return dialect.type_descriptor(JSON())
 
 
 class SensorReadingORM(Base):
@@ -95,6 +109,34 @@ class DroneRegistryORM(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
+
+class GeoFeatureORM(Base):
+    """Persistent geographic feature stored in PostGIS-compatible form."""
+
+    __tablename__ = "geo_features"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    feature_id: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    feature_type: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    zone: Mapped[str | None] = mapped_column(String(80), index=True, nullable=True)
+    geometry_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    geometry_geojson: Mapped[dict] = mapped_column(JSON, nullable=False)
+    geometry: Mapped[object | None] = mapped_column(PostGISGeometry(), nullable=True)
+    properties: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    source_service: Mapped[str] = mapped_column(String(80), nullable=False, default="citosmart")
+    timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_geo_features_type_zone", "feature_type", "zone"),
     )
 
 

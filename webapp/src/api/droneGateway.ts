@@ -173,6 +173,50 @@ export interface MappingOverlaySummary {
   geofences: unknown[];
 }
 
+export interface MappingGeoJsonFeatureCollection {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    id?: string;
+    geometry: { type: string; coordinates: unknown };
+    properties?: Record<string, unknown>;
+  }>;
+}
+
+export interface MappingGeofenceDataset {
+  geojson: MappingGeoJsonFeatureCollection;
+  overlays: Array<{
+    overlay_id: string;
+    overlay_type: string;
+    label: string;
+    position?: GeoPoint | null;
+    metadata: Record<string, unknown>;
+  }>;
+}
+
+export interface MappingSearchResult {
+  name: string;
+  display_name: string;
+  type: string;
+  zone: string;
+  geometry: { type: string; coordinates: unknown };
+}
+
+export interface MappingSearchResponse {
+  query: string;
+  radius_km: number;
+  source: string;
+  results: MappingSearchResult[];
+  geojson: MappingGeoJsonFeatureCollection;
+  radius: { type: string; coordinates: unknown } | null;
+}
+
+export interface MappingCityMapResponse {
+  html: string;
+  geojson_layers: Record<string, MappingGeoJsonFeatureCollection | { type: string; coordinates: unknown } | null>;
+  marker_layers: Record<string, Array<Record<string, unknown>>>;
+}
+
 export const demoDroneFleet: DroneFleet = {
   drones: [
     {
@@ -295,6 +339,23 @@ export async function fetchMappingOverlays(): Promise<MappingOverlaySummary> {
   return data;
 }
 
+export async function fetchMappingGeofences(): Promise<MappingGeofenceDataset> {
+  const { data } = await mappingGeospatial.get<MappingGeofenceDataset>("/geofences");
+  return data;
+}
+
+export async function searchMappingLocations(query: string, radiusKm: number): Promise<MappingSearchResponse> {
+  const { data } = await mappingGeospatial.get<MappingSearchResponse>("/search", {
+    params: { query, radius_km: radiusKm },
+  });
+  return data;
+}
+
+export async function fetchCityMapPayload(): Promise<MappingCityMapResponse> {
+  const { data } = await mappingGeospatial.get<MappingCityMapResponse>("/maps/city");
+  return data;
+}
+
 export function useDroneGatewayReady() {
   return useQuery({
     queryKey: ["drone-gateway", "ready"],
@@ -394,6 +455,34 @@ export function useMappingOverlays() {
     queryKey: ["mapping-geospatial", "overlays"],
     queryFn: fetchMappingOverlays,
     refetchInterval: 5_000,
+    retry: 1,
+  });
+}
+
+export function useMappingGeofences() {
+  return useQuery({
+    queryKey: ["mapping-geospatial", "geofences"],
+    queryFn: fetchMappingGeofences,
+    refetchInterval: 10_000,
+    retry: 1,
+  });
+}
+
+export function useMappingSearch(query: string, radiusKm: number) {
+  return useQuery({
+    queryKey: ["mapping-geospatial", "search", query, radiusKm],
+    queryFn: () => searchMappingLocations(query, radiusKm),
+    enabled: query.trim().length > 0,
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+}
+
+export function useCityMapPayload() {
+  return useQuery({
+    queryKey: ["mapping-geospatial", "city-map"],
+    queryFn: fetchCityMapPayload,
+    refetchInterval: 15_000,
     retry: 1,
   });
 }

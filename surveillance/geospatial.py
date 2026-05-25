@@ -2,86 +2,529 @@
 ================================================================================
  File: surveillance/geospatial.py
  Purpose:
-   Lightweight WGS84 location enrichment for drone, sensor, and map services.
+   Shared geographic processing engine for GPS normalization, geofence
+   evaluation, search, and Folium map rendering across SmartCito services.
 ================================================================================
 """
 
 from __future__ import annotations
 
+import json
+import os
+from functools import lru_cache
+from typing import Any
+from urllib import parse, request
+
+import folium
+import geopandas as gpd
+from pyproj import Transformer
+from shapely.geometry import LineString, Point, Polygon, mapping, shape
+
 from surveillance.models import GeoPoint, MapOverlay
 
 
-GEOFENCES = [
+WGS84_CRS = "EPSG:4326"
+WEB_MERCATOR_CRS = "EPSG:3857"
+ALERT_BUFFER_METERS = 250.0
+
+_TO_WEB_MERCATOR = Transformer.from_crs(WGS84_CRS, WEB_MERCATOR_CRS, always_xy=True)
+_TO_WGS84 = Transformer.from_crs(WEB_MERCATOR_CRS, WGS84_CRS, always_xy=True)
+
+GEOFENCE_SPECS = [
     {
         "id": "zone-1-cbd",
-        "label": "CBD Operations Zone",
-        "min_lat": -25.7550,
-        "max_lat": -25.7420,
-        "min_lon": 28.2180,
-        "max_lon": 28.2360,
+        "name": "CBD Operations Zone",
+        "type": "geofence",
+        "zone": "cbd",
         "criticality": "high",
+        "polygon": [
+            (28.2180, -25.7550),
+            (28.2360, -25.7550),
+            (28.2360, -25.7420),
+            (28.2180, -25.7420),
+        ],
     },
     {
         "id": "zone-2-transport",
-        "label": "Transport Corridor",
-        "min_lat": -25.7600,
-        "max_lat": -25.7350,
-        "min_lon": 28.1700,
-        "max_lon": 28.2050,
+        "name": "Transport Corridor",
+        "type": "restricted_area",
+        "zone": "transport",
         "criticality": "medium",
+        "polygon": [
+            (28.1700, -25.7600),
+            (28.2050, -25.7600),
+            (28.2050, -25.7350),
+            (28.1700, -25.7350),
+        ],
     },
     {
         "id": "zone-3-critical-infra",
-        "label": "Critical Infrastructure Area",
-        "min_lat": -25.7520,
-        "max_lat": -25.7380,
-        "min_lon": 28.2360,
-        "max_lon": 28.2600,
+        "name": "Critical Infrastructure Area",
+        "type": "alert_zone",
+        "zone": "critical_infrastructure",
         "criticality": "critical",
+        "polygon": [
+            (28.2360, -25.7520),
+            (28.2600, -25.7520),
+            (28.2600, -25.7380),
+            (28.2360, -25.7380),
+        ],
+    },
+]
+
+LOCAL_SEARCH_INDEX = [
+    {
+        "name": "Johannesburg",
+        "display_name": "Johannesburg, Gauteng, South Africa",
+        "type": "city",
+        "zone": "johannesburg",
+        "timestamp": None,
+        "latitude": -26.2041,
+        "longitude": 28.0473,
+    },
+    {
+        "name": "Winchester Hills",
+        "display_name": "Winchester Hills, Johannesburg, Gauteng, South Africa",
+        "type": "district",
+        "zone": "johannesburg",
+        "timestamp": None,
+        "latitude": -26.2682,
+        "longitude": 28.0202,
+    },
+    {
+        "name": "Pretoria CBD",
+        "display_name": "Pretoria CBD, Tshwane, Gauteng, South Africa",
+        "type": "district",
+        "zone": "pretoria",
+        "timestamp": None,
+        "latitude": -25.7479,
+        "longitude": 28.2293,
     },
 ]
 
 
-def resolve_zone(position: GeoPoint | None) -> dict[str, str | None]:
-    if position is None:
-        return {"zone_id": None, "zone_label": None, "criticality": None}
+def _geometry_to_point(geometry: Point) -> GeoPoint:
+    return GeoPoint(latitude=float(geometry.y), longitude=float(geometry.x))
 
-    for geofence in GEOFENCES:
-        if (
-            geofence["min_lat"] <= position.latitude <= geofence["max_lat"]
-            and geofence["min_lon"] <= position.longitude <= geofence["max_lon"]
-        ):
+
+def _build_geodataframe(records: list[dict[str, Any]]) -> gpd.GeoDataFrame:
+    return gpd.GeoDataFrame(records, geometry="geometry", crs=WGS84_CRS)
+
+
+def _backend_geospatial_url() -> str:
+    return os.getenv("CITOSMART_GEOSPATIAL_URL", "http://citosmart:8000/api/v1/geospatial/dataset")
+
+
+def fetch_persisted_geographic_dataset() -> dict[str, Any] | None:
+    req = request.Request(url=_backend_geospatial_url(), headers={"Accept": "application/json"})
+    try:
+        with request.urlopen(req, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8") or "{}")
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _dataset_features_by_type(feature_type: str) -> list[dict[str, Any]]:
+    dataset = fetch_persisted_geographic_dataset()
+    if not dataset:
+        return []
+    if feature_type == "mission_route":
+        candidate = dataset.get("mission_routes")
+    else:
+        candidate = dataset.get(f"{feature_type}s")
+    return candidate if isinstance(candidate, list) else []
+
+
+def geofence_geodataframe() -> gpd.GeoDataFrame:
+    persisted_geofences = _dataset_features_by_type("geofence")
+    persisted_zones = _dataset_features_by_type("zone")
+    source_features = persisted_geofences + persisted_zones
+    if source_features:
+        records = [
+            {
+                "id": item["feature_id"],
+                "name": item["name"],
+                "type": item["feature_type"],
+                "zone": item.get("zone"),
+                "timestamp": item.get("timestamp"),
+                "criticality": item.get("properties", {}).get("criticality", "low"),
+                "geometry": shape(item["geometry"]),
+            }
+            for item in source_features
+        ]
+    else:
+        records = [
+            {
+                "id": spec["id"],
+                "name": spec["name"],
+                "type": spec["type"],
+                "zone": spec["zone"],
+                "timestamp": None,
+                "criticality": spec["criticality"],
+                "geometry": Polygon(spec["polygon"]),
+            }
+            for spec in GEOFENCE_SPECS
+        ]
+    return _build_geodataframe(records)
+
+
+def geofence_geodataframe_projected() -> gpd.GeoDataFrame:
+    return geofence_geodataframe().to_crs(WEB_MERCATOR_CRS)
+
+
+@lru_cache(maxsize=1)
+def _city_reference_center() -> tuple[float, float]:
+    projected_centroids = geofence_geodataframe().to_crs(WEB_MERCATOR_CRS).geometry.centroid
+    centroid_points = gpd.GeoSeries(projected_centroids, crs=WEB_MERCATOR_CRS).to_crs(WGS84_CRS)
+    return float(centroid_points.y.mean()), float(centroid_points.x.mean())
+
+
+def normalize_point(position: GeoPoint | None) -> dict[str, Any]:
+    if position is None:
+        return {
+            "position": None,
+            "coordinate_system": WGS84_CRS,
+            "map_projection": WEB_MERCATOR_CRS,
+            "projected": None,
+        }
+
+    points = _build_geodataframe(
+        [
+            {
+                "name": "normalized-position",
+                "type": "point",
+                "zone": None,
+                "timestamp": None,
+                "geometry": Point(position.longitude, position.latitude),
+            }
+        ]
+    )
+    projected = points.to_crs(WEB_MERCATOR_CRS)
+    round_tripped = projected.to_crs(WGS84_CRS)
+    normalized_geometry = round_tripped.geometry.iloc[0]
+    projected_geometry = projected.geometry.iloc[0]
+    normalized_point = GeoPoint(
+        latitude=float(normalized_geometry.y),
+        longitude=float(normalized_geometry.x),
+        altitude_m=position.altitude_m,
+    )
+    return {
+        "position": normalized_point,
+        "coordinate_system": WGS84_CRS,
+        "map_projection": WEB_MERCATOR_CRS,
+        "projected": {"x": float(projected_geometry.x), "y": float(projected_geometry.y)},
+    }
+
+
+def resolve_zone(position: GeoPoint | None) -> dict[str, Any]:
+    normalized = normalize_point(position)
+    normalized_position = normalized["position"]
+    if normalized_position is None:
+        return {
+            "zone_id": None,
+            "zone_label": None,
+            "criticality": None,
+            "status": "unknown",
+            "distance_m": None,
+            "violation": False,
+        }
+
+    point = Point(normalized_position.longitude, normalized_position.latitude)
+    point_projected = Point(*_TO_WEB_MERCATOR.transform(point.x, point.y))
+    geofences = geofence_geodataframe()
+    geofences_projected = geofence_geodataframe_projected()
+
+    for index, row in geofences.iterrows():
+        geometry = row.geometry
+        if geometry.contains(point) or geometry.intersects(point):
             return {
-                "zone_id": str(geofence["id"]),
-                "zone_label": str(geofence["label"]),
-                "criticality": str(geofence["criticality"]),
+                "zone_id": str(row["id"]),
+                "zone_label": str(row["name"]),
+                "criticality": str(row["criticality"]),
+                "status": "inside",
+                "distance_m": 0.0,
+                "violation": str(row["criticality"]) in {"high", "critical"},
+                "zone": str(row["zone"]),
+                "coordinate_system": WGS84_CRS,
+                "map_projection": WEB_MERCATOR_CRS,
+                "projected_position": normalized["projected"],
+                "buffer_m": ALERT_BUFFER_METERS,
             }
 
-    return {"zone_id": "outside-managed-zones", "zone_label": "Outside managed zones", "criticality": "low"}
+        projected_geometry = geofences_projected.geometry.iloc[index]
+        buffered = projected_geometry.buffer(ALERT_BUFFER_METERS)
+        if buffered.contains(point_projected):
+            return {
+                "zone_id": str(row["id"]),
+                "zone_label": str(row["name"]),
+                "criticality": str(row["criticality"]),
+                "status": "nearby",
+                "distance_m": round(float(projected_geometry.distance(point_projected)), 3),
+                "violation": False,
+                "zone": str(row["zone"]),
+                "coordinate_system": WGS84_CRS,
+                "map_projection": WEB_MERCATOR_CRS,
+                "projected_position": normalized["projected"],
+                "buffer_m": ALERT_BUFFER_METERS,
+            }
+
+    distances = geofences_projected.geometry.distance(point_projected)
+    nearest_index = int(distances.idxmin())
+    nearest = geofences.iloc[nearest_index]
+    return {
+        "zone_id": "outside-managed-zones",
+        "zone_label": "Outside managed zones",
+        "criticality": "low",
+        "status": "outside",
+        "distance_m": round(float(distances.iloc[nearest_index]), 3),
+        "violation": False,
+        "nearest_zone_id": str(nearest["id"]),
+        "nearest_zone_label": str(nearest["name"]),
+        "coordinate_system": WGS84_CRS,
+        "map_projection": WEB_MERCATOR_CRS,
+        "projected_position": normalized["projected"],
+        "buffer_m": ALERT_BUFFER_METERS,
+    }
 
 
 def geofence_overlays() -> list[MapOverlay]:
     overlays: list[MapOverlay] = []
-    for geofence in GEOFENCES:
-        center = GeoPoint(
-            latitude=(float(geofence["min_lat"]) + float(geofence["max_lat"])) / 2,
-            longitude=(float(geofence["min_lon"]) + float(geofence["max_lon"])) / 2,
-        )
+    geofences = geofence_geodataframe()
+    projected_centroids = geofences.to_crs(WEB_MERCATOR_CRS).geometry.centroid
+    centroid_points = gpd.GeoSeries(projected_centroids, crs=WEB_MERCATOR_CRS).to_crs(WGS84_CRS)
+    for index, row in geofences.iterrows():
+        centroid = centroid_points.iloc[index]
         overlays.append(
             MapOverlay(
-                overlay_id=str(geofence["id"]),
+                overlay_id=str(row["id"]),
                 overlay_type="geofence",
-                label=str(geofence["label"]),
-                position=center,
-                metadata={"criticality": geofence["criticality"]},
+                label=str(row["name"]),
+                position=_geometry_to_point(centroid),
+                metadata={
+                    "criticality": str(row["criticality"]),
+                    "zone": str(row["zone"]),
+                    "type": str(row["type"]),
+                    "geometry": mapping(row.geometry),
+                },
             )
         )
     return overlays
 
 
+def evaluate_geofence_activity(
+    current_position: GeoPoint,
+    previous_position: GeoPoint | None = None,
+    path: list[GeoPoint] | None = None,
+) -> dict[str, Any]:
+    geofences = geofence_geodataframe()
+    current_point = Point(current_position.longitude, current_position.latitude)
+    current_inside = geofences[geofences.geometry.apply(lambda geometry: geometry.contains(current_point) or geometry.intersects(current_point))]
+
+    previous_ids: set[str] = set()
+    if previous_position is not None:
+        previous_point = Point(previous_position.longitude, previous_position.latitude)
+        previous_inside = geofences[geofences.geometry.apply(lambda geometry: geometry.contains(previous_point) or geometry.intersects(previous_point))]
+        previous_ids = {str(value) for value in previous_inside["id"].tolist()}
+
+    path_intersections: set[str] = set()
+    if path:
+        route = LineString([(waypoint.longitude, waypoint.latitude) for waypoint in path])
+        path_intersections = {
+            str(row["id"])
+            for _, row in geofences.iterrows()
+            if row.geometry.intersects(route)
+        }
+
+    current_ids = {str(value) for value in current_inside["id"].tolist()}
+    entries = sorted(current_ids - previous_ids)
+    exits = sorted(previous_ids - current_ids)
+    violations = sorted(
+        {
+            str(row["id"])
+            for _, row in current_inside.iterrows()
+            if str(row["criticality"]) in {"high", "critical"}
+        }
+        | {
+            str(row["id"])
+            for _, row in geofences.iterrows()
+            if str(row["id"]) in path_intersections and str(row["criticality"]) in {"high", "critical"}
+        }
+    )
+    current_zone = resolve_zone(current_position)
+    return {
+        "current_zone": current_zone,
+        "entries": entries,
+        "exits": exits,
+        "intersections": sorted(path_intersections),
+        "violations": violations,
+    }
+
+
 def path_around(position: GeoPoint) -> list[GeoPoint]:
+    normalized = normalize_point(position)["position"] or position
+    route = LineString(
+        [
+            (normalized.longitude - 0.0012, normalized.latitude - 0.0011),
+            (normalized.longitude - 0.0005, normalized.latitude - 0.0004),
+            (normalized.longitude, normalized.latitude),
+        ]
+    )
     return [
-        GeoPoint(latitude=position.latitude - 0.0011, longitude=position.longitude - 0.0012, altitude_m=position.altitude_m),
-        GeoPoint(latitude=position.latitude - 0.0004, longitude=position.longitude - 0.0005, altitude_m=position.altitude_m),
-        position,
+        GeoPoint(latitude=float(latitude), longitude=float(longitude), altitude_m=position.altitude_m)
+        for longitude, latitude in route.coords
     ]
+
+
+def geofence_geojson() -> dict[str, Any]:
+    geofences = geofence_geodataframe()
+    return json.loads(geofences.to_json())
+
+
+def _fetch_nominatim_results(query: str, limit: int) -> list[dict[str, Any]]:
+    encoded_query = parse.urlencode({"q": query, "format": "jsonv2", "limit": limit})
+    req = request.Request(
+        url=f"https://nominatim.openstreetmap.org/search?{encoded_query}",
+        headers={"User-Agent": "SMARTCITO-GeographicEngine/1.0"},
+    )
+    try:
+        with request.urlopen(req, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8") or "[]")
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def _fallback_search_results(query: str) -> list[dict[str, Any]]:
+    tokens = [token.strip().lower() for token in query.replace("->", " ").split() if token.strip()]
+    if not tokens:
+        return []
+    matches = []
+    for item in LOCAL_SEARCH_INDEX:
+        haystack = f"{item['name']} {item['display_name']} {item['zone']}".lower()
+        if all(token in haystack for token in tokens):
+            matches.append(item)
+    return matches
+
+
+def search_locations(query: str, radius_km: float = 2.0, limit: int = 5) -> dict[str, Any]:
+    raw_results = _fetch_nominatim_results(query, limit)
+    source = "nominatim"
+    if not raw_results:
+        raw_results = _fallback_search_results(query)
+        source = "fallback-index"
+
+    records: list[dict[str, Any]] = []
+    for item in raw_results[:limit]:
+        latitude = float(item.get("lat", item.get("latitude")))
+        longitude = float(item.get("lon", item.get("longitude")))
+        records.append(
+            {
+                "name": str(item.get("name") or item.get("display_name") or query),
+                "type": str(item.get("type") or item.get("addresstype") or "search_result"),
+                "zone": str(item.get("zone") or item.get("address", {}).get("city") or "search"),
+                "timestamp": None,
+                "display_name": str(item.get("display_name") or item.get("name") or query),
+                "geometry": Point(longitude, latitude),
+            }
+        )
+
+    result_gdf = _build_geodataframe(records) if records else _build_geodataframe([])
+    radius_geojson: dict[str, Any] | None = None
+    if not result_gdf.empty:
+        projected = result_gdf.to_crs(WEB_MERCATOR_CRS)
+        first_geometry = projected.geometry.iloc[0]
+        radius_polygon = first_geometry.buffer(radius_km * 1000)
+        radius_geojson = mapping(radius_polygon)
+
+    return {
+        "query": query,
+        "radius_km": radius_km,
+        "source": source,
+        "results": [
+            {
+                "name": str(row["name"]),
+                "display_name": str(row["display_name"]),
+                "type": str(row["type"]),
+                "zone": str(row["zone"]),
+                "geometry": mapping(row.geometry),
+            }
+            for _, row in result_gdf.iterrows()
+        ],
+        "geojson": json.loads(result_gdf.to_json()) if not result_gdf.empty else {"type": "FeatureCollection", "features": []},
+        "radius": radius_geojson,
+    }
+
+
+def render_city_map(
+    *,
+    drone_overlays: list[MapOverlay] | None = None,
+    sensor_overlays: list[MapOverlay] | None = None,
+    threat_overlays: list[MapOverlay] | None = None,
+    geofence_overlays_list: list[MapOverlay] | None = None,
+) -> dict[str, Any]:
+    center_lat, center_lon = _city_reference_center()
+    city_map = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles="OpenStreetMap")
+    persisted_dataset = fetch_persisted_geographic_dataset() or {}
+
+    overlays_by_type = {
+        "drones": drone_overlays or [],
+        "sensors": sensor_overlays or [],
+        "threats": threat_overlays or [],
+        "geofences": geofence_overlays_list or geofence_overlays(),
+    }
+
+    folium.GeoJson(geofence_geojson(), name="geofences").add_to(city_map)
+
+    for mission_route in persisted_dataset.get("mission_routes", []):
+        geometry = mission_route.get("geometry", {})
+        if geometry.get("type") == "LineString":
+            folium.PolyLine(
+                [(latitude, longitude) for longitude, latitude in geometry.get("coordinates", [])],
+                tooltip=mission_route.get("name", "Mission route"),
+            ).add_to(city_map)
+
+    for feature_group in (persisted_dataset.get("sensors", []), persisted_dataset.get("cameras", [])):
+        for feature in feature_group:
+            geometry = feature.get("geometry", {})
+            coordinates = geometry.get("coordinates", [])
+            if geometry.get("type") == "Point" and len(coordinates) == 2:
+                folium.CircleMarker(
+                    location=[coordinates[1], coordinates[0]],
+                    radius=5,
+                    tooltip=feature.get("name", "Geographic asset"),
+                    fill=True,
+                ).add_to(city_map)
+
+    marker_layers: dict[str, list[dict[str, Any]]] = {key: [] for key in overlays_by_type}
+    for layer_name, overlays in overlays_by_type.items():
+        for overlay in overlays:
+            if overlay.position is not None:
+                folium.Marker(
+                    location=[overlay.position.latitude, overlay.position.longitude],
+                    tooltip=overlay.label,
+                    popup=overlay.label,
+                ).add_to(city_map)
+                marker_layers[layer_name].append(
+                    {
+                        "overlay_id": overlay.overlay_id,
+                        "label": overlay.label,
+                        "latitude": overlay.position.latitude,
+                        "longitude": overlay.position.longitude,
+                    }
+                )
+            if overlay.path:
+                folium.PolyLine([(point.latitude, point.longitude) for point in overlay.path], tooltip=overlay.label).add_to(city_map)
+
+    folium.LayerControl().add_to(city_map)
+    return {
+        "html": city_map.get_root().render(),
+        "geojson_layers": {
+            "geofences": geofence_geojson(),
+            "search_radius": None,
+            "mission_routes": persisted_dataset.get("geojson_layers", {}).get("mission_route", {"type": "FeatureCollection", "features": []}),
+        },
+        "marker_layers": marker_layers,
+    }

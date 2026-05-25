@@ -1,4 +1,5 @@
 import os
+from urllib.error import URLError
 
 os.environ["SMARTCITO_KAFKA_ENABLED"] = "0"
 os.environ["DRONE_REGISTRY_ENABLED"] = "0"
@@ -7,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from surveillance.drone_camera_service import app as camera_app
 from surveillance.drone_gateway_service import app as drone_app
+from surveillance import geospatial
 from surveillance.mapping_service import app as mapping_app
 from surveillance.mission_control_service import app as mission_app
 from surveillance.robot_gateway_service import app as robot_app
@@ -285,3 +287,77 @@ def test_mapping_service_exposes_overlays() -> None:
     assert overview.status_code == 200
     assert overview.json()["drones"][0]["overlay_id"] == "drone-map-001"
     assert overview.json()["geofences"]
+
+
+def test_mapping_service_resolves_normalized_coordinates() -> None:
+    client = TestClient(mapping_app)
+    response = client.post(
+        "/resolve",
+        json={"latitude": -25.7479, "longitude": 28.2293, "altitude_m": 120},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["coordinate_system"] == "EPSG:4326"
+    assert payload["map_projection"] == "EPSG:3857"
+    assert payload["projected_position"]["x"]
+    assert payload["zone"]["zone_id"] == "zone-1-cbd"
+
+
+def test_mapping_service_evaluates_geofence_entries_and_violations() -> None:
+    client = TestClient(mapping_app)
+    response = client.post(
+        "/geofences/evaluate",
+        json={
+            "previous_position": {"latitude": -25.7605, "longitude": 28.2170},
+            "current_position": {"latitude": -25.7479, "longitude": 28.2293},
+            "path": [
+                {"latitude": -25.7605, "longitude": 28.2170},
+                {"latitude": -25.7479, "longitude": 28.2293},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "zone-1-cbd" in payload["entries"]
+    assert "zone-1-cbd" in payload["violations"]
+    assert "zone-1-cbd" in payload["intersections"]
+
+
+def test_mapping_service_search_uses_fallback_index_when_nominatim_unavailable(monkeypatch) -> None:
+    def raise_url_error(*args: object, **kwargs: object) -> None:
+        raise URLError("offline")
+
+    monkeypatch.setattr(geospatial.request, "urlopen", raise_url_error)
+    client = TestClient(mapping_app)
+    response = client.get("/search", params={"query": "Johannesburg Winchester", "radius_km": 2})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "fallback-index"
+    assert payload["results"]
+    assert payload["radius"]["type"] == "Polygon"
+
+
+def test_mapping_service_renders_city_map_outputs() -> None:
+    client = TestClient(mapping_app)
+    client.post(
+        "/overlays/sensor",
+        json={
+            "device_id": "sensor-map-001",
+            "sensor_type": "acoustic",
+            "position": {"latitude": -25.7465, "longitude": 28.2315},
+            "value": 42,
+            "unit": "dB",
+            "alert": True,
+        },
+    )
+
+    response = client.get("/maps/city")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "leaflet" in payload["html"].lower()
+    assert payload["geojson_layers"]["geofences"]["features"]
+    assert payload["marker_layers"]["sensors"]

@@ -276,6 +276,58 @@ vi.mock("@/api/droneGateway", () => ({
   useDroneGatewayMetrics: () => ({ data: 'smartcito_drone_gateway_events_total{event="commands_accepted"} 1' }),
   useDroneMissions: () => ({ data: [] }),
   useMappingOverlays: () => ({ data: { drones: [], sensors: [], threats: [], geofences: [] } }),
+  useMappingGeofences: () => ({
+    data: {
+      geojson: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            id: "zone-1-cbd",
+            geometry: { type: "Polygon", coordinates: [[[28.218, -25.755], [28.236, -25.755], [28.236, -25.742], [28.218, -25.742], [28.218, -25.755]]] },
+            properties: { name: "CBD Operations Zone", criticality: "high" },
+          },
+        ],
+      },
+      overlays: [
+        {
+          overlay_id: "zone-1-cbd",
+          overlay_type: "geofence",
+          label: "CBD Operations Zone",
+          position: { latitude: -25.7485, longitude: 28.227 },
+          metadata: { criticality: "high" },
+        },
+      ],
+    },
+  }),
+  useMappingSearch: () => ({
+    data: {
+      query: "Pretoria CBD",
+      radius_km: 4,
+      source: "fallback-index",
+      results: [
+        {
+          name: "Pretoria CBD",
+          display_name: "Pretoria CBD, Tshwane, Gauteng, South Africa",
+          type: "district",
+          zone: "pretoria",
+          geometry: { type: "Point", coordinates: [28.2293, -25.7479] },
+        },
+      ],
+      geojson: { type: "FeatureCollection", features: [] },
+      radius: { type: "Polygon", coordinates: [] },
+    },
+  }),
+  useCityMapPayload: () => ({
+    data: {
+      html: "<html><body><div>leaflet rendered map</div></body></html>",
+      geojson_layers: {
+        geofences: { type: "FeatureCollection", features: [] },
+        mission_routes: { type: "FeatureCollection", features: [] },
+      },
+      marker_layers: { drones: [], sensors: [], threats: [], geofences: [] },
+    },
+  }),
   useCameraFeeds: () => ({
     data: [
       {
@@ -541,5 +593,6 @@ describe("Dashboard", () => {
     expect(screen.getByText(/Street-level navigation/i)).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /robot mission assignees/i })).toBeInTheDocument();
     expect(screen.getByText(/2 robots/i)).toBeInTheDocument();
+    expect(screen.getByTitle(/SmartCito Folium city map/i)).toBeInTheDocument();
   });
 });

@@ -7,6 +7,7 @@ import { useCameras, demoCameraFleet } from "@/api/cameras";
 import { useControlPlaneOverview } from "@/api/controlPlane";
 import {
   demoCameraFeed,
+  useCityMapPayload,
   demoDroneFleet,
   demoDroneMission,
   demoThreatAlerts,
@@ -14,7 +15,9 @@ import {
   useDroneFleet,
   useDroneGatewayReady,
   useDroneMissions,
+  useMappingGeofences,
   useMappingOverlays,
+  useMappingSearch,
   useSendDroneCommand,
   useThreatAlerts,
   type DroneCommandAction,
@@ -358,6 +361,7 @@ export default function Dashboard() {
   const cameraFeedsQuery = useCameraFeeds();
   const threatAlertsQuery = useThreatAlerts();
   const mappingOverlaysQuery = useMappingOverlays();
+  const mappingGeofencesQuery = useMappingGeofences();
   const cameraQuery = useCameras();
   const recentSensorsQuery = useRecentSensors(18);
   const liveEventsQuery = useLiveEvents();
@@ -366,6 +370,7 @@ export default function Dashboard() {
   const sendDroneCommand = useSendDroneCommand();
   const smartMapQuery = useSmartMapOverview();
   const sceneOverviewQuery = useSceneOverview();
+  const cityMapPayloadQuery = useCityMapPayload();
   const robotFleetQuery = useRobotFleet();
   const cityMissionsQuery = useCityMissions();
   const createCityMission = useCreateCityMission();
@@ -848,6 +853,17 @@ export default function Dashboard() {
     [cameras, deterrentAssets, drones, robotAssets, sensorAssets],
   );
   const selectedSearch = citySearchPresets.find((preset) => preset.id === selectedSearchId) ?? citySearchPresets[0];
+  const liveSearchQuery = useMappingSearch(`${selectedSearch.city} ${selectedSearch.district}`, selectedSearch.radiusKm);
+  const liveSearch = liveSearchQuery.data;
+  const selectedSearchResult = liveSearch?.results[0] ?? null;
+  const liveGeofences = mappingGeofencesQuery.data;
+  const cityMapPayload = cityMapPayloadQuery.data ?? null;
+  const dynamicZoneCount = (liveGeofences?.overlays.length ?? overlayCounts.geofences.length) || zoneOverlays.length;
+  const mapGeoJsonLayers = [
+    { id: "geofences", data: liveGeofences?.geojson ?? null, color: "#57c7d4" },
+    { id: "search-radius", data: liveSearch?.radius ?? null, color: "#f1c96b" },
+    { id: "mission-routes", data: cityMapPayload?.geojson_layers?.mission_routes ?? null, color: "#8fb6ff" },
+  ];
 
   const systemHealthCards = [
     { label: "Realtime bus", value: realtime.connected ? "streaming" : "fallback polling" },
@@ -1132,11 +1148,12 @@ export default function Dashboard() {
 
               <section className="command-context-card city-search-card">
                 <h4>Search corridor</h4>
-                <p>{selectedSearch.detail}</p>
+                <p>{selectedSearchResult?.display_name ?? selectedSearch.detail}</p>
                 <div className="command-chip-row">
                   <span>{selectedSearch.city}</span>
-                  <span>{selectedSearch.district}</span>
+                  <span>{selectedSearchResult?.name ?? selectedSearch.district}</span>
                   <span>{selectedSearch.radiusKm} km radius</span>
+                  <span>{liveSearch?.source ?? "preset"}</span>
                 </div>
               </section>
 
@@ -1186,7 +1203,7 @@ export default function Dashboard() {
               <div className="command-layer-row">
                 <span>{mapMode.toUpperCase()} city view with drones, robots, patrol routes, geofences, cameras, sensors, and deterrents.</span>
                 <div>
-                  <CommandStatusBadge label={`${overlayCounts.geofences.length || zoneOverlays.length} zones`} />
+                  <CommandStatusBadge label={`${dynamicZoneCount} zones`} />
                   <CommandStatusBadge label={`${threatAlerts.length} alerts`} />
                   <CommandStatusBadge label={`${robotAssets.length} robots`} />
                   <CommandStatusBadge label={`${sensorAssets.length} sensors`} />
@@ -1197,12 +1214,13 @@ export default function Dashboard() {
                 <CommandCenterMap
                   assets={mapAssets}
                   threatAlerts={threatAlerts}
-                  zones={zoneOverlays}
+                  zones={liveGeofences ? [] : zoneOverlays}
                   selectedAssetId={selectedAsset?.id ?? focusedDroneId}
                   drawPoints={drawPoints}
                   mode={mapMode}
                   sceneOverview={sceneOverview}
                   cameraCorridors={cameraCorridors}
+                  geoJsonLayers={mapGeoJsonLayers}
                   onMapClick={handleMapClick}
                   onSelectAsset={(kind, id) => selectAsset(kind, id)}
                 />
@@ -1219,7 +1237,7 @@ export default function Dashboard() {
 
               <div className="command-metrics-grid">
                 <div><span>City focus</span><strong>{selectedSearch.city}</strong></div>
-                <div><span>District</span><strong>{selectedSearch.district}</strong></div>
+                <div><span>District</span><strong>{selectedSearchResult?.name ?? selectedSearch.district}</strong></div>
                 <div><span>Radius</span><strong>{selectedSearch.radiusKm} km</strong></div>
                 <div><span>Map mode</span><strong>{mapMode.toUpperCase()}</strong></div>
                 <div><span>Robots online</span><strong>{robotAssets.length}</strong></div>
@@ -1244,10 +1262,23 @@ export default function Dashboard() {
               <section className="command-context-card">
                 <h4>Street-level navigation</h4>
                 <div className="command-map-summary">
-                  <strong>{selectedSearch.city} → {selectedSearch.district}</strong>
+                  <strong>{selectedSearch.city} → {selectedSearchResult?.name ?? selectedSearch.district}</strong>
                   <span>{mapMode === "street" ? "Street camera corridors and curb-level navigation are active." : "Switch to Street mode for curb-level navigation lanes."}</span>
                   <CommandStatusBadge label={mapMode === "street" ? "street ready" : "3d overview"} />
                 </div>
+              </section>
+
+              <section className="command-context-card">
+                <h4>Folium map preview</h4>
+                <div className="command-map-summary">
+                  <strong>{cityMapPayload ? "Live geographic render" : "Fallback map render"}</strong>
+                  <span>The preview below is served from the mapping service HTML output.</span>
+                </div>
+                <iframe
+                  title="SmartCito Folium city map"
+                  srcDoc={cityMapPayload?.html ?? "<html><body><p>Map preview unavailable.</p></body></html>"}
+                  style={{ width: "100%", minHeight: 220, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, background: "#071520" }}
+                />
               </section>
 
               <section className="command-context-card">
