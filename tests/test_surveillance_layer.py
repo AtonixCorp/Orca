@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from surveillance.drone_camera_service import app as camera_app
 from surveillance.drone_gateway_service import app as drone_app
 from surveillance.mapping_service import app as mapping_app
+from surveillance.mission_control_service import app as mission_app
 from surveillance.sensor_gateway_service import app as sensor_app
 from surveillance.threat_detection_service import app as threat_app
 
@@ -113,6 +114,52 @@ def test_camera_service_requires_stream_or_frame_url() -> None:
     frame = client.post("/frames", json={"drone_id": "drone-002", "width": 640, "height": 360})
     assert frame.status_code == 200
     assert frame.json()["event"]["topic"] == "smartcito.drone.camera.frames"
+
+    feeds = client.get("/feeds")
+    assert feeds.status_code == 200
+    assert feeds.json()[0]["drone_id"] == "drone-002"
+
+
+def test_mission_control_validates_and_uploads_patrol() -> None:
+    client = TestClient(mission_app)
+
+    review_required = client.post(
+        "/missions/validate",
+        json={
+            "drone_id": "drone-review-001",
+            "name": "Critical route",
+            "altitude_m": 95,
+            "speed_mps": 8,
+            "waypoints": [
+                {"latitude": -25.7454, "longitude": 28.2438, "altitude_m": 95},
+                {"latitude": -25.7444, "longitude": 28.2441, "altitude_m": 95},
+            ],
+        },
+    )
+    assert review_required.status_code == 200
+    assert review_required.json()["requires_operator_review"] is True
+
+    uploaded = client.post(
+        "/missions",
+        json={
+            "drone_id": "drone-safe-001",
+            "name": "Transport patrol",
+            "altitude_m": 80,
+            "speed_mps": 8,
+            "waypoints": [
+                {"latitude": -25.7480, "longitude": 28.1800, "altitude_m": 80},
+                {"latitude": -25.7460, "longitude": 28.1820, "altitude_m": 80},
+            ],
+        },
+    )
+    assert uploaded.status_code == 200
+    payload = uploaded.json()
+    assert payload["status"] in {"uploaded", "failed"}
+    assert payload["validation"]["zones"]
+
+    missions = client.get("/missions")
+    assert missions.status_code == 200
+    assert len(missions.json()) >= 1
 
 
 def test_threat_detection_classifies_critical_zone() -> None:

@@ -11,12 +11,23 @@ Drones and sensors are not baked into the SmartCito OS image. They run as servic
 | Drone Gateway | 8020 | Receives drone telemetry and accepts commands such as takeoff, land, move-to, patrol path, hover, and return-to-base | `smartcito.drone.telemetry`, `smartcito.drone.events`, `smartcito.drone.missions` |
 | Sensor Gateway | 8021 | Receives fixed/mobile sensor readings over HTTP bridge payloads from MQTT, TCP, LoRaWAN, or vendor adapters | `smartcito.sensors.raw`, `smartcito.sensor.alerts` |
 | Drone Camera Ingestion | 8022 | Registers RTSP/WebRTC/vendor streams and publishes frame metadata or key-frame events | `smartcito.drone.camera.frames`, `smartcito.drone.camera.alerts` |
+| Mission Control | 8025 | Validates mission routes, uploads patrol paths through Drone Gateway, and monitors mission status for operators | `smartcito.drone.missions`, `smartcito.drone.events` |
 | Threat Detection | 8023 | Classifies AI detections and correlated sensor/video/GPS events into low, medium, high, or critical alerts | `smartcito.threat.alerts` |
 | Mapping and Geospatial | 8024 | Converts WGS84 GPS into zones, geofences, routes, heatmaps, and dashboard overlays | `smartcito.location.enriched` |
 
 ## Drone Gateway Contract
 
 The Drone Gateway is the only SmartCito service that talks directly to drones. Mission Control, dashboards, AI, analytics, and operator APIs talk to the gateway instead of opening their own drone connections.
+
+Mission Control endpoints:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /ready` | Reports mission topic state, gateway route, and mission count |
+| `POST /missions/validate` | Validates route geometry, geofence criticality, and patrol policy |
+| `POST /missions` | Creates a mission and uploads it to Drone Gateway when validation passes |
+| `GET /missions` | Lists active and historical mission records |
+| `POST /missions/{mission_id}/status` | Updates progress and lifecycle state for monitoring flows |
 
 Implemented endpoints:
 
@@ -67,6 +78,7 @@ Start the supporting service stack:
 
 ```bash
 docker compose -f docker-compose.services.yml up drone-gateway sensor-gateway drone-camera-ingestion threat-detection mapping-geospatial kafka
+docker compose -f docker-compose.services.yml up mission-control
 ```
 
 The services default to Kafka publishing. For endpoint-only development without a broker, set:
@@ -194,6 +206,7 @@ The manifests deploy:
 - `drone-gateway` in the `backend` namespace
 - `sensor-gateway` in the `backend` namespace
 - `drone-camera-ingestion` in the `backend` namespace
+- `mission-control` in the `backend` namespace
 - `threat-detection` in the `ai` namespace, with a GPU-optional node selector
 - `mapping-geospatial` in the `visualization` namespace
 

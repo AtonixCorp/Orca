@@ -155,6 +155,72 @@ class DroneCommandAck(BaseModel):
     publish: PublishResult
 
 
+class MissionStatus(str, Enum):
+    DRAFT = "draft"
+    UPLOADED = "uploaded"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class MissionWaypoint(GeoPoint):
+    hold_seconds: int | None = Field(default=None, ge=0, le=3600)
+
+
+class MissionUploadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    drone_id: str = Field(..., min_length=2, max_length=80)
+    name: str = Field(..., min_length=3, max_length=120)
+    altitude_m: float = Field(..., ge=20, le=500)
+    speed_mps: float = Field(..., ge=1, le=40)
+    waypoints: list[MissionWaypoint] = Field(..., min_length=2, max_length=200)
+
+
+class MissionValidationResult(BaseModel):
+    mission_id: str | None = None
+    valid: bool
+    status: MissionStatus = MissionStatus.DRAFT
+    issues: list[str] = Field(default_factory=list)
+    zones: list[str] = Field(default_factory=list)
+    requires_operator_review: bool = False
+
+
+class DroneMission(BaseModel):
+    mission_id: str = Field(default_factory=lambda: str(uuid4()))
+    drone_id: str = Field(..., min_length=2, max_length=80)
+    name: str = Field(..., min_length=3, max_length=120)
+    status: MissionStatus = MissionStatus.DRAFT
+    altitude_m: float = Field(..., ge=20, le=500)
+    speed_mps: float = Field(..., ge=1, le=40)
+    progress_percent: float = Field(default=0, ge=0, le=100)
+    waypoints: list[MissionWaypoint] = Field(..., min_length=2, max_length=200)
+    validation: MissionValidationResult | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class CameraDetection(BaseModel):
+    label: str = Field(..., min_length=2, max_length=80)
+    confidence: float = Field(..., ge=0, le=1)
+
+
+class CameraGimbalState(BaseModel):
+    pitch_deg: float = Field(default=0, ge=-90, le=45)
+    yaw_deg: float = Field(default=0, ge=-180, le=180)
+    zoom_level: float = Field(default=1, ge=1, le=200)
+
+
+class CameraFeedStatus(BaseModel):
+    drone_id: str = Field(..., min_length=2, max_length=80)
+    stream_url: str = Field(..., min_length=5)
+    preview_url: str | None = None
+    camera_id: str = Field(default="rgb-main", min_length=2, max_length=80)
+    ai_detections: list[CameraDetection] = Field(default_factory=list)
+    gimbal: CameraGimbalState = Field(default_factory=CameraGimbalState)
+
+
 class CameraStreamRegistration(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

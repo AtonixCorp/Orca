@@ -270,6 +270,22 @@ services:
     restart: unless-stopped
     logging: *stdout-logging
 
+  mission-control:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${MISSION_CONTROL_IMAGE:-smartcito/mission-control:local}
+    container_name: smartcito-mission-control
+    env_file: .env
+    command: ["uvicorn", "surveillance.mission_control_service:app", "--host", "0.0.0.0", "--port", "8025"]
+    ports:
+      - "${MISSION_CONTROL_PORT:-8025}:8025"
+    depends_on:
+      - kafka
+      - drone-gateway
+    restart: unless-stopped
+    logging: *stdout-logging
+
   threat-detection:
     build:
       context: .

@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 
 from surveillance.geospatial import resolve_zone
 from surveillance.kafka import get_publisher
-from surveillance.models import CameraStreamRegistration, FrameMetadata, NormalizedEvent, PublishEnvelope
+from surveillance.models import CameraDetection, CameraFeedStatus, CameraGimbalState, CameraStreamRegistration, FrameMetadata, NormalizedEvent, PublishEnvelope
 from surveillance.topics import DRONE_CAMERA_ALERTS_TOPIC, DRONE_CAMERA_FRAMES_TOPIC
 
 
@@ -24,6 +24,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 app = FastAPI(title="SmartCito Drone Camera Ingestion Service")
 _streams: dict[str, CameraStreamRegistration] = {}
+_latest_frames: dict[str, FrameMetadata] = {}
 
 
 @app.get("/health")
@@ -58,6 +59,28 @@ async def list_streams() -> dict[str, list[dict[str, object]]]:
     return {"streams": [stream.model_dump(mode="json") for stream in _streams.values()]}
 
 
+@app.get("/feeds", response_model=list[CameraFeedStatus])
+async def feeds() -> list[CameraFeedStatus]:
+    results: list[CameraFeedStatus] = []
+    for drone_id, stream in _streams.items():
+        frame = _latest_frames.get(drone_id)
+        results.append(
+            CameraFeedStatus(
+                drone_id=drone_id,
+                stream_url=stream.stream_url,
+                preview_url=f"/streams/{drone_id}/preview" if stream.preview_enabled else None,
+                camera_id="rgb-main",
+                ai_detections=[CameraDetection(label="surveillance-online", confidence=0.99)] if frame else [],
+                gimbal=CameraGimbalState(
+                    pitch_deg=0 if frame is None else -12,
+                    yaw_deg=0,
+                    zoom_level=1.0,
+                ),
+            )
+        )
+    return results
+
+
 @app.post("/frames", response_model=PublishEnvelope)
 async def ingest_frame(frame: FrameMetadata) -> PublishEnvelope:
     stream = _streams.get(frame.drone_id)
@@ -67,6 +90,7 @@ async def ingest_frame(frame: FrameMetadata) -> PublishEnvelope:
     stream_url = frame.stream_url or (stream.stream_url if stream else None)
     position = frame.position or (stream.position if stream else None)
     preview_url = frame.preview_url or (f"/streams/{frame.drone_id}/preview" if stream and stream.preview_enabled else None)
+    _latest_frames[frame.drone_id] = frame
     event = NormalizedEvent(
         event_type="drone.camera.frame",
         source="drone-camera-ingestion",

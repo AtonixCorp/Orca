@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
+from hardware.drone_edge.reference import build_reference_stack
 from hardware.monitoring.agent import collect_sample
 
 
@@ -34,3 +35,8 @@ async def sample() -> dict[str, object]:
         "temperature_c": sample.temperature_c,
         "power_kw": sample.power_kw,
     }
+
+
+@app.get("/drone-edge/reference-stack")
+async def drone_edge_reference_stack() -> dict[str, object]:
+    return build_reference_stack()

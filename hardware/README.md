@@ -17,6 +17,7 @@ hardware/
 ├── body_cameras/   # Body-worn camera reference builds and firmware notes
 ├── micro_cameras/  # Compact magnetic camera designs and streaming notes
 ├── gps_modules/    # GNSS chip configs and device-side location guidance
+├── drone_edge/     # PX4/ROS2 companion runtime, MAVLink bridge, and SmartCito SDK
 ├── api_connectors/ # Registration, heartbeat, and stream API contracts
 ├── quantum/        # Quantum-ready procedures and contributor guidance
 ├── compute/        # Controller + GPU compute node specs
@@ -36,6 +37,9 @@ hardware/
 - **Storage nodes** absorb ingestion bursts and long-term archives.
 - **Network and security appliances** enforce segmentation, VPN access,
   intrusion detection, and key protection.
+- **Drone companion computers** run PX4-facing MAVLink uplinks, ROS2 autonomy
+  integration, sensor fusion packaging, and camera/video registration into the
+  SmartCito cloud services.
 
 ## Software Mapping
 
@@ -47,6 +51,7 @@ hardware/
 - Prototyping notes: [`docs/prototyping.md`](docs/prototyping.md)
 - Open protocol baseline: [`networking/protocols/`](networking/protocols/)
 - Quantum-ready procedures: [`quantum/`](quantum/)
+- Drone hardware and communication stack: [`drone_edge/README.md`](drone_edge/README.md)
 
 ## Technologies Used
 
@@ -65,4 +70,5 @@ docker run --rm -p 8014:8014 smartcito-hardware-domain
 
 ```bash
 curl http://localhost:8014/monitoring/sample
+curl http://localhost:8014/drone-edge/reference-stack
 ```
