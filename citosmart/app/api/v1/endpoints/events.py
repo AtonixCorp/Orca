@@ -8,13 +8,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+import asyncio
+
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
+from app.core.security import decode_token
 from app.core.security import require_role
 from app.db.session import get_session
 from app.schemas.events import AlertEvent, HistoricalAnalyticsPoint, NormalizedEvent
 from app.services.event_pipeline import event_pipeline_service
+from app.services.realtime_bus import realtime_bus_service
 
 router = APIRouter()
 
@@ -50,3 +55,32 @@ async def history(
 )
 async def alerts(limit: int = Query(25, ge=1, le=100)) -> list[AlertEvent]:
     return list(event_pipeline_service.alerts(limit=limit))
+
+
+@router.websocket("/stream")
+async def stream_events(websocket: WebSocket, token: str | None = Query(default=None)) -> None:
+    raw_token = token
+    if raw_token is None:
+        authorization = websocket.headers.get("authorization", "")
+        if authorization.lower().startswith("bearer "):
+            raw_token = authorization.split(" ", 1)[1]
+
+    if raw_token is None:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    try:
+        decode_token(raw_token)
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await websocket.accept()
+    settings = get_settings()
+
+    try:
+        while True:
+            await websocket.send_json(await realtime_bus_service.snapshot())
+            await asyncio.sleep(settings.realtime_snapshot_interval_seconds)
+    except WebSocketDisconnect:
+        return

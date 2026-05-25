@@ -1337,6 +1337,203 @@ code {
   text-align: left;
 }
 
+.command-tab-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.command-tab,
+.command-panel-shell {
+  border: 1px solid rgba(131, 180, 195, 0.18);
+  background: rgba(5, 18, 27, 0.74);
+  box-shadow: 0 24px 40px rgba(2, 8, 12, 0.22);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+}
+
+.command-tab {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem 1.1rem;
+  text-align: left;
+}
+
+.command-tab strong {
+  color: #f6fcff;
+}
+
+.command-tab span {
+  color: var(--fg-muted);
+}
+
+.command-tab.is-active {
+  outline: 1px solid rgba(239, 202, 114, 0.8);
+  box-shadow: 0 0 0 1px rgba(239, 202, 114, 0.3);
+}
+
+.command-screen {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.command-panel-shell {
+  padding: 1rem;
+}
+
+.command-drone-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) 360px;
+  gap: 1rem;
+}
+
+.command-drone-selector-row,
+.command-feed-mode-row,
+.command-action-row,
+.command-export-row,
+.command-flight-controls-grid,
+.command-action-stack,
+.command-log-filter-grid,
+.command-gps-strip {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.command-drone-selector-row {
+  align-items: end;
+  justify-content: space-between;
+}
+
+.command-feed-mode-row button,
+.command-action-row button,
+.command-flight-controls-grid button,
+.command-action-stack button,
+.command-export-row button,
+.command-gimbal-grid button,
+.command-tab,
+.command-log-list button {
+  border: 1px solid rgba(105, 156, 173, 0.22);
+  border-radius: 14px;
+  background: rgba(11, 29, 42, 0.82);
+  color: #f4fbff;
+  padding: 0.72rem 0.86rem;
+}
+
+.command-video-stage {
+  margin-top: 0.85rem;
+}
+
+.command-video-stage .command-video-feed {
+  min-height: 420px;
+}
+
+.command-gimbal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.command-drone-sidebar,
+.command-map-tools,
+.command-map-side,
+.command-log-detail {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.command-flight-bar {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.command-flight-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.command-danger-button {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(88, 16, 21, 0.84);
+}
+
+.command-map-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 360px;
+  gap: 1rem;
+}
+
+.command-map-stage-panel {
+  min-width: 0;
+}
+
+.command-map-summary {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.command-gps-strip {
+  justify-content: space-between;
+}
+
+.command-gps-strip div {
+  min-width: 150px;
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(7, 21, 32, 0.78);
+  border: 1px solid rgba(104, 151, 172, 0.14);
+}
+
+.command-gps-strip span,
+.command-map-summary span {
+  color: var(--fg-muted);
+}
+
+.command-log-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 380px;
+  gap: 1rem;
+}
+
+.command-log-list.tall {
+  max-height: 680px;
+}
+
+.command-log-list.compact {
+  max-height: 220px;
+}
+
+.command-log-entry.is-selected {
+  outline: 1px solid rgba(239, 202, 114, 0.8);
+  box-shadow: 0 0 0 1px rgba(239, 202, 114, 0.3);
+}
+
+.command-log-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.command-log-health-row {
+  padding-top: 0.5rem;
+}
+
+.command-code-block {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(8, 20, 30, 0.88);
+  border: 1px solid rgba(104, 151, 172, 0.12);
+  color: #d8e8ef;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.85rem;
+}
+
 .command-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 360px;
@@ -1538,6 +1735,17 @@ code {
     radial-gradient(circle at 10% 20%, rgba(82, 160, 196, 0.12), transparent 18%),
     radial-gradient(circle at 80% 35%, rgba(236, 190, 105, 0.1), transparent 24%),
     #071520;
+}
+
+.command-map-shell {
+  margin-top: 0.85rem;
+}
+
+.command-leaflet-map {
+  min-height: 560px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(131, 180, 195, 0.18);
 }
 
 .command-map-grid,
@@ -1777,6 +1985,21 @@ code {
 }
 
 @media (max-width: 1320px) {
+  .command-tab-nav,
+  .command-log-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-drone-layout,
+  .command-map-layout,
+  .command-log-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-flight-controls-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .command-layout {
     grid-template-columns: 290px minmax(0, 1fr);
   }
@@ -1849,6 +2072,15 @@ code {
     display: grid;
   }
 
+  .command-tab-nav,
+  .command-drone-layout,
+  .command-map-layout,
+  .command-log-grid,
+  .command-log-filter-grid,
+  .command-flight-controls-grid {
+    grid-template-columns: 1fr;
+  }
+
   .command-topbar-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
@@ -1858,11 +2090,19 @@ code {
     min-height: 420px;
   }
 
+  .command-leaflet-map {
+    min-height: 420px;
+  }
+
   .command-metrics-grid,
   .command-health-grid,
   .command-control-grid,
   .command-bottom-bar {
     grid-template-columns: 1fr;
+  }
+
+  .command-gps-strip {
+    flex-direction: column;
   }
 
   .command-log-entry {

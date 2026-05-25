@@ -1,4 +1,6 @@
-import { startTransition, useDeferredValue, useEffect, useState, type MouseEvent } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+
+import CommandCenterMap from "@/components/CommandCenterMap";
 
 import { useCameras, demoCameraFleet } from "@/api/cameras";
 import { useControlPlaneOverview } from "@/api/controlPlane";
@@ -21,11 +23,15 @@ import {
 } from "@/api/droneGateway";
 import { useAlerts, useLiveEvents } from "@/api/events";
 import { demoSmartMapDevices, useSmartMapOverview, type SmartMapDevice } from "@/api/map";
+import { useRealtimeCommandCenter } from "@/api/realtime";
 import { useRecentSensors, type SensorReading } from "@/api/sensors";
 
 type AssetKind = "drone" | "camera" | "sensor" | "deterrent" | "alert";
+type DashboardScreen = "drone" | "map" | "logs";
 type DrawMode = "mission" | "geofence" | "alert-zone" | null;
-type LogFilter = "all" | "alerts" | "commands" | "errors";
+type FeedMode = "rgb" | "thermal" | "zoom";
+type LogFilter = "all" | "telemetry" | "mission" | "camera" | "sensor" | "alert" | "command";
+type LogSeverity = "info" | "warning" | "critical";
 
 interface SelectedAsset {
   kind: AssetKind;
@@ -76,9 +82,14 @@ interface MapPoint {
 
 interface CommandLogEntry {
   id: string;
-  category: "telemetry" | "alert" | "command" | "error";
+  category: Exclude<LogFilter, "all">;
+  severity: LogSeverity;
   message: string;
   timestamp: string;
+  assetId?: string;
+  sourceLabel: string;
+  rawPacket: string;
+  rosMessage: string;
 }
 
 interface AssetListItem {
@@ -93,12 +104,6 @@ interface AssetListItem {
 
 const cityName = "Pretoria Command Center";
 const operatorName = "Primary Operator";
-const cityBounds = {
-  north: -25.742,
-  south: -25.7525,
-  west: 28.226,
-  east: 28.2485,
-};
 
 const demoDeterrents: DeterrentAsset[] = [
   {
@@ -190,16 +195,6 @@ function formatClock(date: Date) {
   }).format(date);
 }
 
-function projectPoint(latitude: number, longitude: number) {
-  const left = ((longitude - cityBounds.west) / (cityBounds.east - cityBounds.west)) * 100;
-  const top = ((cityBounds.north - latitude) / (cityBounds.north - cityBounds.south)) * 100;
-
-  return {
-    left: `${Math.min(96, Math.max(4, left)).toFixed(2)}%`,
-    top: `${Math.min(95, Math.max(5, top)).toFixed(2)}%`,
-  };
-}
-
 function getStatusTone(status: string) {
   const normalized = status.toLowerCase();
   if (normalized.includes("critical") || normalized.includes("error") || normalized.includes("offline")) {
@@ -243,18 +238,54 @@ function resolveCoordinates(deviceId: string, mapDevices: SmartMapDevice[], fall
   };
 }
 
+function buildCsv(records: CommandLogEntry[]) {
+  const header = ["timestamp", "type", "severity", "source", "asset_id", "message", "mavlink", "ros2"];
+  const rows = records.map((record) => [
+    record.timestamp,
+    record.category,
+    record.severity,
+    record.sourceLabel,
+    record.assetId ?? "",
+    record.message,
+    record.rawPacket,
+    record.rosMessage,
+  ]);
+
+  return [header, ...rows]
+    .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+}
+
+function downloadTextFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+
 export default function Dashboard() {
   const [clock, setClock] = useState(() => new Date());
-  const [assetFilter, setAssetFilter] = useState("");
-  const deferredAssetFilter = useDeferredValue(assetFilter);
+  const [activeScreen, setActiveScreen] = useState<DashboardScreen>("drone");
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
+  const [selectedDroneId, setSelectedDroneId] = useState("");
+  const [selectedMissionId, setSelectedMissionId] = useState("");
+  const [selectedAlertId, setSelectedAlertId] = useState("");
+  const [selectedFeedMode, setSelectedFeedMode] = useState<FeedMode>("rgb");
   const [drawMode, setDrawMode] = useState<DrawMode>("mission");
   const [drawPoints, setDrawPoints] = useState<MapPoint[]>([]);
   const [logFilter, setLogFilter] = useState<LogFilter>("all");
+  const [logSeverityFilter, setLogSeverityFilter] = useState<"all" | LogSeverity>("all");
+  const [logDroneFilter, setLogDroneFilter] = useState("all");
+  const [logDateFilter, setLogDateFilter] = useState("");
+  const [selectedLogId, setSelectedLogId] = useState("");
   const [localLogs, setLocalLogs] = useState<CommandLogEntry[]>([]);
-  const [selectedMissionId, setSelectedMissionId] = useState("");
-  const [selectedAlertId, setSelectedAlertId] = useState("");
-  const [selectedCityCamera, setSelectedCityCamera] = useState("");
+  const [assetFilter, setAssetFilter] = useState("");
+  const deferredAssetFilter = useDeferredValue(assetFilter);
+  const [recordingEnabled, setRecordingEnabled] = useState(false);
+  const realtime = useRealtimeCommandCenter(true);
 
   const gatewayReady = useDroneGatewayReady();
   const droneFleetQuery = useDroneFleet();
@@ -271,29 +302,71 @@ export default function Dashboard() {
   const uploadMission = useUploadDroneMission();
   const smartMapQuery = useSmartMapOverview();
 
+  const realtimeSurveillance = realtime.snapshot?.surveillance;
+  const realtimeControlPlane = realtime.snapshot?.control_plane as {
+    data_flow?: Array<{ destination: string; state: string }>;
+    security?: { audit_pipeline_status?: string };
+    controls?: Array<unknown>;
+  } | undefined;
+  const realtimeMap = realtime.snapshot?.map as { devices?: SmartMapDevice[] } | undefined;
+  const realtimeFleet = realtimeSurveillance?.drones as unknown as typeof demoDroneFleet | undefined;
+  const realtimeMissions = realtimeSurveillance?.missions as unknown as DroneMission[] | undefined;
+  const realtimeCameraFeeds = realtimeSurveillance?.camera_feeds as unknown as Array<typeof demoCameraFeed> | undefined;
+  const realtimeThreatAlerts = realtimeSurveillance?.threat_alerts as unknown as typeof demoThreatAlerts | undefined;
+  const realtimeEvents = realtime.snapshot?.events as Array<{
+    event_id: string;
+    source: string;
+    event_type: string;
+    occurred_at: string;
+  }> | undefined;
+  const realtimeAlerts = realtime.snapshot?.alerts as Array<{
+    id: string;
+    severity: string;
+    title: string;
+    message: string;
+    created_at: string;
+  }> | undefined;
+
   useEffect(() => {
     const timerId = window.setInterval(() => setClock(new Date()), 1000);
     return () => window.clearInterval(timerId);
   }, []);
 
   const fleet =
-    droneFleetQuery.data && (droneFleetQuery.data.drones.length > 0 || droneFleetQuery.data.registry.length > 0)
-      ? droneFleetQuery.data
-      : demoDroneFleet;
+    realtimeFleet && (Array.isArray(realtimeFleet.drones) || Array.isArray(realtimeFleet.registry))
+      ? realtimeFleet
+      : droneFleetQuery.data && (droneFleetQuery.data.drones.length > 0 || droneFleetQuery.data.registry.length > 0)
+        ? droneFleetQuery.data
+        : demoDroneFleet;
+
   const droneTelemetries = fleet.drones.length > 0 ? fleet.drones : demoDroneFleet.drones;
   const droneRegistry = fleet.registry.length > 0 ? fleet.registry : demoDroneFleet.registry;
-  const missionItems = droneMissionsQuery.data && droneMissionsQuery.data.length > 0
-    ? droneMissionsQuery.data
-    : [demoDroneMission];
+  const missionItems = Array.isArray(realtimeMissions) && realtimeMissions.length > 0
+    ? realtimeMissions
+    : droneMissionsQuery.data && droneMissionsQuery.data.length > 0
+      ? droneMissionsQuery.data
+      : [demoDroneMission];
   const cameraDevices = cameraQuery.data && cameraQuery.data.length > 0 ? cameraQuery.data : demoCameraFleet;
-  const cameraFeeds = cameraFeedsQuery.data && cameraFeedsQuery.data.length > 0 ? cameraFeedsQuery.data : [demoCameraFeed];
-  const mapDevices = smartMapQuery.data && smartMapQuery.data.devices.length > 0 ? smartMapQuery.data.devices : demoSmartMapDevices;
-  const threatAlerts = threatAlertsQuery.data && threatAlertsQuery.data.length > 0
-    ? threatAlertsQuery.data
-    : demoThreatAlerts;
-  const eventAlerts = eventAlertsQuery.data ?? [];
-  const liveEvents = liveEventsQuery.data ?? [];
-  const overlayCounts = mappingOverlaysQuery.data ?? { drones: [], sensors: [], threats: [], geofences: [] };
+  const cameraFeeds = Array.isArray(realtimeCameraFeeds) && realtimeCameraFeeds.length > 0
+    ? realtimeCameraFeeds
+    : cameraFeedsQuery.data && cameraFeedsQuery.data.length > 0
+      ? cameraFeedsQuery.data
+      : [demoCameraFeed];
+  const mapDevices = realtimeMap?.devices && realtimeMap.devices.length > 0
+    ? realtimeMap.devices
+    : smartMapQuery.data && smartMapQuery.data.devices.length > 0
+      ? smartMapQuery.data.devices
+      : demoSmartMapDevices;
+  const threatAlerts = Array.isArray(realtimeThreatAlerts) && realtimeThreatAlerts.length > 0
+    ? realtimeThreatAlerts
+    : threatAlertsQuery.data && threatAlertsQuery.data.length > 0
+      ? threatAlertsQuery.data
+      : demoThreatAlerts;
+  const eventAlerts = realtimeAlerts ?? eventAlertsQuery.data ?? [];
+  const liveEvents = realtimeEvents ?? liveEventsQuery.data ?? [];
+  const overlayCounts = realtimeSurveillance?.mapping_overlays && typeof realtimeSurveillance.mapping_overlays === "object"
+    ? (realtimeSurveillance.mapping_overlays as { drones: unknown[]; sensors: unknown[]; threats: unknown[]; geofences: unknown[] })
+    : mappingOverlaysQuery.data ?? { drones: [], sensors: [], threats: [], geofences: [] };
   const serviceHealth = controlPlaneQuery.data;
   const recentReadings = recentSensorsQuery.data ?? [];
 
@@ -343,14 +416,12 @@ export default function Dashboard() {
 
   const cameras: AssetListItem[] = cameraDevices.map((camera, index) => {
     const coordinates = resolveCoordinates(camera.device_id, mapDevices, -25.7479 + index * 0.0012, 28.2293 + index * 0.0011);
-    const feed = cameraFeeds.find((candidate) => candidate.camera_id === camera.device_id) ?? cameraFeeds[index] ?? cameraFeeds[0];
-
     return {
       id: camera.device_id,
       kind: "camera",
       label: camera.device_id,
       status: camera.stream_status,
-      subtitle: feed ? `PTZ ${feed.gimbal.zoom_level}x · ${feed.ai_detections.length} detections` : camera.device_type,
+      subtitle: `${camera.device_type} · ${camera.battery_level ?? 100}% battery`,
       latitude: camera.location?.lat ?? coordinates.latitude,
       longitude: camera.location?.lon ?? coordinates.longitude,
     };
@@ -376,7 +447,11 @@ export default function Dashboard() {
     longitude: device.longitude,
   }));
 
-  const assetCatalog = [...drones, ...cameras, ...sensorAssets, ...deterrentAssets];
+  const assetCatalog = useMemo(
+    () => [...drones, ...cameras, ...sensorAssets, ...deterrentAssets],
+    [cameras, deterrentAssets, drones, sensorAssets],
+  );
+
   const filteredAssets = deferredAssetFilter.trim().length === 0
     ? assetCatalog
     : assetCatalog.filter((asset) =>
@@ -384,10 +459,10 @@ export default function Dashboard() {
       );
 
   useEffect(() => {
-    if (!selectedAsset && filteredAssets.length > 0) {
-      setSelectedAsset({ kind: filteredAssets[0].kind, id: filteredAssets[0].id });
+    if (!selectedDroneId && drones.length > 0) {
+      setSelectedDroneId(drones[0].id);
     }
-  }, [filteredAssets, selectedAsset]);
+  }, [drones, selectedDroneId]);
 
   useEffect(() => {
     if (!selectedMissionId && missionItems.length > 0) {
@@ -402,121 +477,65 @@ export default function Dashboard() {
   }, [selectedAlertId, threatAlerts]);
 
   useEffect(() => {
-    if (!selectedCityCamera && cameras.length > 0) {
-      setSelectedCityCamera(cameras[0].id);
+    if (!selectedAsset && drones.length > 0) {
+      setSelectedAsset({ kind: "drone", id: drones[0].id });
     }
-  }, [cameras, selectedCityCamera]);
+  }, [drones, selectedAsset]);
 
-  function appendLocalLog(category: CommandLogEntry["category"], message: string) {
+  const focusedDroneId = selectedDroneId || drones[0]?.id || "";
+  const activeDroneTelemetry = droneTelemetries.find((telemetry) => telemetry.drone_id === focusedDroneId) ?? droneTelemetries[0] ?? null;
+  const activeDroneRegistry = droneRegistry.find((registryEntry) => registryEntry.drone_id === focusedDroneId) ?? droneRegistry[0] ?? null;
+  const activeDroneMission = missionItems.find((mission) => mission.mission_id === selectedMissionId)
+    ?? missionItems.find((mission) => mission.drone_id === focusedDroneId)
+    ?? missionItems[0]
+    ?? null;
+  const activeDroneFeed = cameraFeeds.find((feed) => feed.drone_id === focusedDroneId) ?? cameraFeeds[0] ?? null;
+  const activeThreatAlert = threatAlerts.find((alert) => alert.alert_id === selectedAlertId) ?? threatAlerts[0] ?? null;
+
+  const telemetryPosition = activeDroneTelemetry?.position ?? { latitude: drones[0]?.latitude ?? -25.7454, longitude: drones[0]?.longitude ?? 28.2438, altitude_m: 95 };
+  const availableFeedModes = (activeDroneRegistry?.camera_types ?? ["rgb", "thermal", "zoom"])
+    .filter((cameraType): cameraType is FeedMode => cameraType === "rgb" || cameraType === "thermal" || cameraType === "zoom");
+
+  function appendLocalLog(
+    category: Exclude<LogFilter, "all">,
+    message: string,
+    options?: { severity?: LogSeverity; assetId?: string; sourceLabel?: string },
+  ) {
     setLocalLogs((currentLogs) => [
       {
         id: `${category}-${Date.now()}`,
         category,
+        severity: options?.severity ?? "info",
         message,
         timestamp: new Date().toISOString(),
+        assetId: options?.assetId,
+        sourceLabel: options?.sourceLabel ?? activeDroneRegistry?.model ?? operatorName,
+        rawPacket: `MAVLINK[${category.toUpperCase()}] ${message}`,
+        rosMessage: `topic=/smartcito/${category} payload=${message}`,
       },
       ...currentLogs,
-    ].slice(0, 16));
+    ].slice(0, 32));
   }
 
   function selectAsset(kind: SelectedAsset["kind"], id: string) {
     startTransition(() => setSelectedAsset({ kind, id }));
+    if (kind === "drone") {
+      setSelectedDroneId(id);
+    }
+    if (kind === "alert") {
+      setSelectedAlertId(id);
+    }
   }
 
-  function handleMapClick(event: MouseEvent<HTMLDivElement>) {
+  function handleMapClick(nextPoint: MapPoint) {
     if (!drawMode) {
       return;
     }
 
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const xRatio = (event.clientX - bounds.left) / bounds.width;
-    const yRatio = (event.clientY - bounds.top) / bounds.height;
-    const nextPoint = {
-      latitude: cityBounds.north - yRatio * (cityBounds.north - cityBounds.south),
-      longitude: cityBounds.west + xRatio * (cityBounds.east - cityBounds.west),
-    };
-
-    setDrawPoints((currentPoints) => [...currentPoints, nextPoint].slice(-8));
+    setDrawPoints((currentPoints) => [...currentPoints, nextPoint].slice(-12));
   }
 
-  const activeDroneTelemetry = selectedAsset?.kind === "drone"
-    ? droneTelemetries.find((telemetry) => telemetry.drone_id === selectedAsset.id) ?? null
-    : null;
-  const activeDroneRegistry = selectedAsset?.kind === "drone"
-    ? droneRegistry.find((registryEntry) => registryEntry.drone_id === selectedAsset.id) ?? null
-    : null;
-  const activeDroneMission = selectedAsset?.kind === "drone"
-    ? missionItems.find((mission) => mission.drone_id === selectedAsset.id) ?? missionItems[0] ?? null
-    : null;
-  const activeCamera = selectedAsset?.kind === "camera"
-    ? cameraDevices.find((camera) => camera.device_id === selectedAsset.id) ?? null
-    : null;
-  const activeCameraFeed = selectedAsset?.kind === "camera"
-    ? cameraFeeds.find((feed) => feed.camera_id === selectedAsset.id || feed.camera_id === selectedCityCamera) ?? cameraFeeds[0] ?? null
-    : null;
-  const activeSensor = selectedAsset?.kind === "sensor"
-    ? sensors.find((sensor) => sensor.id === selectedAsset.id) ?? null
-    : null;
-  const activeDeterrent = selectedAsset?.kind === "deterrent"
-    ? demoDeterrents.find((device) => device.id === selectedAsset.id) ?? null
-    : null;
-  const activeThreatAlert = selectedAsset?.kind === "alert"
-    ? threatAlerts.find((alert) => alert.alert_id === selectedAsset.id) ?? null
-    : threatAlerts.find((alert) => alert.alert_id === selectedAlertId) ?? null;
-
-  const linkedAlerts = threatAlerts.filter((alert) => {
-    if (!selectedAsset || selectedAsset.kind === "alert") {
-      return false;
-    }
-    return alert.source_ids.includes(selectedAsset.id);
-  });
-
-  const commandLogsFromEvents: CommandLogEntry[] = liveEvents.slice(0, 10).map((entry) => ({
-    id: entry.event_id,
-    category: entry.event_type.includes("command") ? "command" : entry.event_type.includes("alert") ? "alert" : "telemetry",
-    message: `${entry.source} · ${entry.event_type}`,
-    timestamp: entry.occurred_at,
-  }));
-
-  const alertLogs: CommandLogEntry[] = eventAlerts.slice(0, 8).map((entry) => ({
-    id: entry.id,
-    category: entry.severity.toLowerCase() === "critical" ? "error" : "alert",
-    message: `${entry.title} · ${entry.message}`,
-    timestamp: entry.created_at,
-  }));
-
-  const telemetryLogs: CommandLogEntry[] = droneTelemetries.slice(0, 4).map((telemetry: DroneTelemetry) => ({
-    id: `${telemetry.drone_id}-${telemetry.timestamp}`,
-    category: telemetry.health_flags.length > 0 ? "error" : "telemetry",
-    message: `${telemetry.drone_id} · ${Math.round(telemetry.battery_percent)}% · ${telemetry.flight_mode} · ${telemetry.speed_mps.toFixed(1)} m/s`,
-    timestamp: telemetry.timestamp,
-  }));
-
-  const combinedLogs = [...localLogs, ...alertLogs, ...commandLogsFromEvents, ...telemetryLogs]
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-    .slice(0, 18)
-    .filter((entry) => {
-      if (logFilter === "all") {
-        return true;
-      }
-      if (logFilter === "alerts") {
-        return entry.category === "alert";
-      }
-      if (logFilter === "commands") {
-        return entry.category === "command";
-      }
-      return entry.category === "error";
-    });
-
-  const systemHealthCards = [
-    { label: "Drone Gateway", value: gatewayReady.data ? "online" : "degraded" },
-    { label: "Kafka", value: serviceHealth?.data_flow.some((stage) => stage.destination === "kafka" && stage.state === "healthy") ? "healthy" : "watch" },
-    { label: "Database", value: serviceHealth?.security.audit_pipeline_status ?? "watch" },
-    { label: "Mission Control", value: missionItems.length > 0 ? "ready" : "watch" },
-    { label: "Services", value: `${serviceHealth?.controls.length ?? 0} active` },
-  ];
-
-  function dispatchDroneAction(action: DroneCommandAction) {
+  function dispatchDroneAction(action: DroneCommandAction, options?: { target?: MapPoint; altitude_m?: number; zoom_level?: number; gimbal_pitch_deg?: number; gimbal_yaw_deg?: number }) {
     if (!activeDroneRegistry) {
       return;
     }
@@ -525,21 +544,33 @@ export default function Dashboard() {
       drone_id: activeDroneRegistry.drone_id,
       action,
       requested_by: operatorName,
+      target: options?.target,
+      altitude_m: options?.altitude_m,
+      zoom_level: options?.zoom_level,
+      gimbal_pitch_deg: options?.gimbal_pitch_deg,
+      gimbal_yaw_deg: options?.gimbal_yaw_deg,
     });
-    appendLocalLog("command", `${action} dispatched to ${activeDroneRegistry.drone_id}`);
+
+    appendLocalLog("command", `${action.replaceAll("_", " ")} sent to ${activeDroneRegistry.drone_id}`, {
+      assetId: activeDroneRegistry.drone_id,
+      sourceLabel: activeDroneRegistry.model,
+      severity: action === "land" ? "warning" : "info",
+    });
   }
 
-  function assignMission(mission: DroneMission) {
-    if (!activeDroneRegistry) {
-      return;
-    }
-
-    appendLocalLog("command", `Mission ${mission.name} assigned to ${activeDroneRegistry.drone_id}`);
+  function handleGimbalMove(pitchDelta: number, yawDelta: number) {
+    dispatchDroneAction("gimbal_move", {
+      gimbal_pitch_deg: (activeDroneFeed?.gimbal.pitch_deg ?? 0) + pitchDelta,
+      gimbal_yaw_deg: (activeDroneFeed?.gimbal.yaw_deg ?? 0) + yawDelta,
+    });
   }
 
-  function uploadQuickMission() {
+  function handleQuickMissionUpload() {
     if (!activeDroneRegistry || drawPoints.length < 2) {
-      appendLocalLog("error", "Quick mission requires a selected drone and at least two map points.");
+      appendLocalLog("mission", "Quick mission requires at least two map points.", {
+        severity: "critical",
+        assetId: focusedDroneId,
+      });
       return;
     }
 
@@ -550,13 +581,161 @@ export default function Dashboard() {
       speed_mps: activeDroneTelemetry?.speed_mps ?? 8,
       waypoints: drawPoints,
     });
-    appendLocalLog("command", `Quick mission uploaded for ${activeDroneRegistry.drone_id}`);
-    setDrawPoints([]);
+
+    appendLocalLog("mission", `Quick mission uploaded for ${activeDroneRegistry.drone_id}`, {
+      assetId: activeDroneRegistry.drone_id,
+      sourceLabel: activeDroneRegistry.model,
+    });
   }
 
-  const linkedCameraAssets = activeSensor
-    ? cameras.filter((camera) => activeSensor.linkedCameraIds.includes(camera.id))
-    : [];
+  function handleGoHere() {
+    const lastPoint = drawPoints.at(-1);
+    if (!activeDroneRegistry || !lastPoint) {
+      appendLocalLog("mission", "Go Here requires one selected point on the map.", {
+        severity: "warning",
+        assetId: focusedDroneId,
+      });
+      return;
+    }
+
+    dispatchDroneAction("move_to", { target: lastPoint, altitude_m: activeDroneTelemetry?.position.altitude_m ?? 90 });
+    appendLocalLog("mission", `Go Here command queued for ${activeDroneRegistry.drone_id}`, {
+      assetId: activeDroneRegistry.drone_id,
+      sourceLabel: activeDroneRegistry.model,
+    });
+  }
+
+  const telemetryLogs: CommandLogEntry[] = droneTelemetries.map((telemetry: DroneTelemetry) => ({
+    id: `${telemetry.drone_id}-${telemetry.timestamp}`,
+    category: "telemetry",
+    severity: telemetry.health_flags.length > 0 ? "critical" : "info",
+    message: `${telemetry.drone_id} · ${Math.round(telemetry.battery_percent)}% battery · ${telemetry.flight_mode} · ${telemetry.speed_mps.toFixed(1)} m/s`,
+    timestamp: telemetry.timestamp,
+    assetId: telemetry.drone_id,
+    sourceLabel: telemetry.drone_id,
+    rawPacket: `HEARTBEAT mode=${telemetry.flight_mode} battery=${Math.round(telemetry.battery_percent)}`,
+    rosMessage: `topic=/drone/${telemetry.drone_id}/telemetry speed=${telemetry.speed_mps.toFixed(1)}`,
+  }));
+
+  const missionLogs: CommandLogEntry[] = missionItems.map((mission) => ({
+    id: `${mission.mission_id}-mission`,
+    category: "mission",
+    severity: mission.progress_percent >= 80 ? "info" : "warning",
+    message: `${mission.name} · ${mission.progress_percent}% complete · ${mission.waypoints.length} waypoints`,
+    timestamp: new Date().toISOString(),
+    assetId: mission.drone_id,
+    sourceLabel: mission.name,
+    rawPacket: `MISSION_ITEM_INT count=${mission.waypoints.length} altitude=${mission.altitude_m}`,
+    rosMessage: `topic=/mission/${mission.mission_id}/status progress=${mission.progress_percent}`,
+  }));
+
+  const cameraLogs: CommandLogEntry[] = cameraFeeds.map((feed) => ({
+    id: `${feed.camera_id}-${feed.drone_id}-camera`,
+    category: "camera",
+    severity: feed.ai_detections.length > 0 ? "warning" : "info",
+    message: `${feed.camera_id} · ${feed.ai_detections.length} detections · zoom ${feed.gimbal.zoom_level}x`,
+    timestamp: new Date().toISOString(),
+    assetId: feed.drone_id,
+    sourceLabel: feed.camera_id,
+    rawPacket: `CAMERA_FEEDBACK zoom=${feed.gimbal.zoom_level} yaw=${feed.gimbal.yaw_deg}`,
+    rosMessage: `topic=/camera/${feed.camera_id}/detections count=${feed.ai_detections.length}`,
+  }));
+
+  const sensorLogs: CommandLogEntry[] = sensors.map((sensor) => ({
+    id: `${sensor.id}-${sensor.lastTriggeredAt}`,
+    category: "sensor",
+    severity: sensor.status === "offline" ? "critical" : sensor.status === "alert" ? "warning" : "info",
+    message: `${sensor.name} · ${sensor.currentValue} ${sensor.unit} · ${sensor.status}`,
+    timestamp: sensor.lastTriggeredAt,
+    assetId: sensor.linkedDroneIds[0],
+    sourceLabel: sensor.name,
+    rawPacket: `SENSOR_REPORT id=${sensor.id} value=${sensor.currentValue}`,
+    rosMessage: `topic=/sensor/${sensor.id}/reading value=${sensor.currentValue}`,
+  }));
+
+  const alertLogs: CommandLogEntry[] = eventAlerts.map((entry) => ({
+    id: entry.id,
+    category: "alert",
+    severity: entry.severity.toLowerCase() === "critical" ? "critical" : "warning",
+    message: `${entry.title} · ${entry.message}`,
+    timestamp: entry.created_at,
+    assetId: activeThreatAlert?.source_ids[0],
+    sourceLabel: entry.title,
+    rawPacket: `ALERT severity=${entry.severity} id=${entry.id}`,
+    rosMessage: `topic=/alerts/${entry.id} severity=${entry.severity}`,
+  }));
+
+  const eventCommandLogs: CommandLogEntry[] = liveEvents.map((entry) => ({
+    id: entry.event_id,
+    category: entry.event_type.includes("command") ? "command" : "telemetry",
+    severity: entry.event_type.includes("alert") ? "warning" : "info",
+    message: `${entry.source} · ${entry.event_type}`,
+    timestamp: entry.occurred_at,
+    assetId: entry.source,
+    sourceLabel: entry.source,
+    rawPacket: `EVENT type=${entry.event_type} source=${entry.source}`,
+    rosMessage: `topic=/events/${entry.source} type=${entry.event_type}`,
+  }));
+
+  const combinedLogs = [...localLogs, ...alertLogs, ...eventCommandLogs, ...telemetryLogs, ...missionLogs, ...cameraLogs, ...sensorLogs]
+    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
+
+  const filteredLogs = combinedLogs.filter((entry) => {
+    if (logFilter !== "all" && entry.category !== logFilter) {
+      return false;
+    }
+    if (logSeverityFilter !== "all" && entry.severity !== logSeverityFilter) {
+      return false;
+    }
+    if (logDroneFilter !== "all" && entry.assetId !== logDroneFilter) {
+      return false;
+    }
+    if (logDateFilter) {
+      const entryDate = new Date(entry.timestamp).toISOString().slice(0, 10);
+      if (entryDate !== logDateFilter) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (!selectedLogId && filteredLogs.length > 0) {
+      setSelectedLogId(filteredLogs[0].id);
+    }
+  }, [filteredLogs, selectedLogId]);
+
+  useEffect(() => {
+    if (selectedLogId && !filteredLogs.some((entry) => entry.id === selectedLogId)) {
+      setSelectedLogId(filteredLogs[0]?.id ?? "");
+    }
+  }, [filteredLogs, selectedLogId]);
+
+  const selectedLog = filteredLogs.find((entry) => entry.id === selectedLogId) ?? filteredLogs[0] ?? null;
+  const selectedAssetSummary = selectedAsset ? assetCatalog.find((asset) => asset.id === selectedAsset.id) ?? null : null;
+  const mapAssets = useMemo(() => [...drones, ...cameras, ...sensorAssets, ...deterrentAssets], [cameras, deterrentAssets, drones, sensorAssets]);
+
+  const systemHealthCards = [
+    { label: "Realtime bus", value: realtime.connected ? "streaming" : "fallback polling" },
+    { label: "Drone Gateway", value: gatewayReady.data || realtimeSurveillance?.drones ? "online" : "degraded" },
+    { label: "Kafka", value: (realtimeControlPlane?.data_flow ?? serviceHealth?.data_flow)?.some((stage) => stage.destination === "kafka" && stage.state === "healthy") ? "healthy" : "watch" },
+    { label: "Database", value: realtimeControlPlane?.security?.audit_pipeline_status ?? serviceHealth?.security.audit_pipeline_status ?? "watch" },
+    { label: "Mission Control", value: missionItems.length > 0 ? "ready" : "watch" },
+    { label: "Global alerts", value: `${threatAlerts.length}` },
+  ];
+
+  function exportLogs(format: "csv" | "json") {
+    if (format === "csv") {
+      downloadTextFile(`smartcito-logs-${Date.now()}.csv`, buildCsv(filteredLogs), "text/csv;charset=utf-8");
+      return;
+    }
+
+    downloadTextFile(
+      `smartcito-logs-${Date.now()}.json`,
+      JSON.stringify(filteredLogs, null, 2),
+      "application/json;charset=utf-8",
+    );
+  }
 
   return (
     <section className="command-center" aria-label="City command center dashboard">
@@ -564,7 +743,7 @@ export default function Dashboard() {
         <div className="command-topbar-block">
           <span className="command-kicker">City command center</span>
           <h2>{cityName}</h2>
-          <p>One operator surface for drones, city cameras, sensors, deterrents, missions, and alerts.</p>
+          <p>Three dedicated operator views for drone flight, mission mapping, and downloadable logs.</p>
         </div>
 
         <div className="command-topbar-meta">
@@ -580,350 +759,152 @@ export default function Dashboard() {
             <span>Local time</span>
             <strong>{formatClock(clock)}</strong>
           </div>
-          <button
-            className="command-alert-pill"
-            type="button"
-            onClick={() => threatAlerts[0] && selectAsset("alert", threatAlerts[0].alert_id)}
-          >
+          <button className="command-alert-pill" type="button" onClick={() => setActiveScreen("logs")}>
             {threatAlerts.length} global alerts
           </button>
         </div>
       </header>
 
-      <div className="command-layout">
-        <aside className="command-left-panel">
-          <div className="command-panel-header">
-            <div>
-              <span className="command-kicker">Assets</span>
-              <h3>Fleet and field inventory</h3>
-            </div>
-            <span className="command-count">{assetCatalog.length}</span>
-          </div>
+      <nav className="command-tab-nav" aria-label="Dashboard screens">
+        {([
+          { id: "drone", label: "Drone Screen", description: "Flight view" },
+          { id: "map", label: "Map Screen", description: "Mission + GPS" },
+          { id: "logs", label: "Logs Screen", description: "Exports + analysis" },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`command-tab ${activeScreen === tab.id ? "is-active" : ""}`}
+            onClick={() => setActiveScreen(tab.id)}
+          >
+            <strong>{tab.label}</strong>
+            <span>{tab.description}</span>
+          </button>
+        ))}
+      </nav>
 
-          <label className="command-search">
-            <span>Search assets</span>
-            <input
-              value={assetFilter}
-              onChange={(event) => setAssetFilter(event.target.value)}
-              placeholder="Drone, camera, sensor, deterrent"
-            />
-          </label>
-
-          <div className="command-asset-groups">
-            <section>
-              <div className="command-subsection-header">
-                <h4>Drones</h4>
-                <span>{drones.length}</span>
-              </div>
-              <div className="command-asset-list">
-                {filteredAssets.filter((asset) => asset.kind === "drone").map((asset) => (
-                  <button
-                    className={`command-asset-card ${selectedAsset?.id === asset.id ? "is-selected" : ""}`}
-                    key={asset.id}
-                    type="button"
-                    onClick={() => selectAsset(asset.kind, asset.id)}
-                  >
-                    <div>
-                      <strong>{asset.label}</strong>
-                      <span>{asset.subtitle}</span>
-                    </div>
-                    <CommandStatusBadge label={asset.status} />
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <div className="command-subsection-header">
-                <h4>Cameras</h4>
-                <span>{cameras.length}</span>
-              </div>
-              <div className="command-asset-list compact">
-                {filteredAssets.filter((asset) => asset.kind === "camera").map((asset) => (
-                  <button
-                    className={`command-asset-row ${selectedAsset?.id === asset.id ? "is-selected" : ""}`}
-                    key={asset.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCityCamera(asset.id);
-                      selectAsset(asset.kind, asset.id);
-                    }}
-                  >
-                    <span>{asset.label}</span>
-                    <CommandStatusBadge label={asset.status} />
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <div className="command-subsection-header">
-                <h4>Sensors</h4>
-                <span>{sensorAssets.length}</span>
-              </div>
-              <div className="command-asset-list compact">
-                {filteredAssets.filter((asset) => asset.kind === "sensor").map((asset) => (
-                  <button
-                    className={`command-asset-row ${selectedAsset?.id === asset.id ? "is-selected" : ""}`}
-                    key={asset.id}
-                    type="button"
-                    onClick={() => selectAsset(asset.kind, asset.id)}
-                  >
-                    <span>{asset.label}</span>
-                    <CommandStatusBadge label={asset.status} />
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <div className="command-subsection-header">
-                <h4>Deterrents</h4>
-                <span>{deterrentAssets.length}</span>
-              </div>
-              <div className="command-asset-list compact">
-                {filteredAssets.filter((asset) => asset.kind === "deterrent").map((asset) => (
-                  <button
-                    className={`command-asset-row ${selectedAsset?.id === asset.id ? "is-selected" : ""}`}
-                    key={asset.id}
-                    type="button"
-                    onClick={() => selectAsset(asset.kind, asset.id)}
-                  >
-                    <span>{asset.label}</span>
-                    <CommandStatusBadge label={asset.status} />
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <section className="command-alert-stack">
-            <div className="command-subsection-header">
-              <h4>Active alerts</h4>
-              <span>{threatAlerts.length}</span>
-            </div>
-            <div className="command-alert-list">
-              {threatAlerts.map((alert) => (
-                <button
-                  className={`command-alert-card ${selectedAsset?.id === alert.alert_id ? "is-selected" : ""}`}
-                  key={alert.alert_id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedAlertId(alert.alert_id);
-                    selectAsset("alert", alert.alert_id);
-                  }}
-                >
-                  <div>
-                    <strong>{alert.title}</strong>
-                    <span>{alert.source_ids.join(", ")}</span>
-                  </div>
-                  <CommandStatusBadge label={alert.threat_level} />
-                </button>
-              ))}
-            </div>
-          </section>
-        </aside>
-
-        <main className="command-center-panel">
-          <section className="command-map-panel">
+      {activeScreen === "drone" ? (
+        <div className="command-screen command-drone-screen">
+          <section className="command-panel-shell command-drone-header">
             <div className="command-panel-header">
               <div>
-                <span className="command-kicker">City map</span>
-                <h3>Operational map and live layers</h3>
-              </div>
-              <div className="command-map-actions">
-                <button type="button" onClick={() => setDrawMode("mission")} className={drawMode === "mission" ? "is-active" : ""}>Mission route</button>
-                <button type="button" onClick={() => setDrawMode("geofence")} className={drawMode === "geofence" ? "is-active" : ""}>Geofence</button>
-                <button type="button" onClick={() => setDrawMode("alert-zone")} className={drawMode === "alert-zone" ? "is-active" : ""}>Alert zone</button>
-                <button type="button" onClick={() => setDrawPoints([])}>Clear</button>
+                <span className="command-kicker">Drone Screen</span>
+                <h3>Primary flight view</h3>
               </div>
             </div>
 
-            <div className="command-layer-row">
-              <span>OpenStreetMap-ready city layer</span>
-              <div>
-                <CommandStatusBadge label={`${overlayCounts.geofences.length || zoneOverlays.length} zones`} />
-                <CommandStatusBadge label={`${threatAlerts.length} alerts`} />
-                <CommandStatusBadge label={`${cameraFeeds.length} live feeds`} />
-              </div>
-            </div>
+            <div className="command-drone-selector-row">
+              <label className="command-form-block">
+                <span>Drone selector</span>
+                <select value={focusedDroneId} onChange={(event) => selectAsset("drone", event.target.value)}>
+                  {droneRegistry.map((drone) => (
+                    <option key={drone.drone_id} value={drone.drone_id}>{drone.model}</option>
+                  ))}
+                </select>
+              </label>
 
-            <div className="command-map-surface" onClick={handleMapClick} role="presentation">
-              <div className="command-map-grid" />
-              <div className="command-map-roads" />
-
-              {zoneOverlays.map((zone) => (
-                <div
-                  className={`command-zone command-zone-${zone.kind}`}
-                  key={zone.id}
-                  style={{ top: `${zone.top}%`, left: `${zone.left}%`, width: `${zone.width}%`, height: `${zone.height}%` }}
-                >
-                  <span>{zone.label}</span>
-                </div>
-              ))}
-
-              {activeThreatAlert ? (
-                <div
-                  className="command-heat command-heat-critical"
-                  style={projectPoint(
-                    assetCatalog.find((asset) => asset.id === activeThreatAlert.source_ids[0])?.latitude ?? -25.745,
-                    assetCatalog.find((asset) => asset.id === activeThreatAlert.source_ids[0])?.longitude ?? 28.244,
-                  )}
-                />
-              ) : null}
-
-              {threatAlerts.slice(1, 3).map((alert) => {
-                const linkedAsset = assetCatalog.find((asset) => asset.id === alert.source_ids[0]);
-                return linkedAsset ? (
-                  <div className="command-heat" key={alert.alert_id} style={projectPoint(linkedAsset.latitude, linkedAsset.longitude)} />
-                ) : null;
-              })}
-
-              {cameras.map((camera) => {
-                const position = projectPoint(camera.latitude, camera.longitude);
-                return (
-                  <div className="command-camera-cluster" key={camera.id} style={position}>
-                    <button
-                      className={`command-map-marker camera ${selectedAsset?.id === camera.id ? "is-selected" : ""}`}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedCityCamera(camera.id);
-                        selectAsset("camera", camera.id);
-                      }}
-                    >
-                      C
-                    </button>
-                    <div className="command-camera-fov" />
-                  </div>
-                );
-              })}
-
-              {drones.map((drone) => {
-                const position = projectPoint(drone.latitude, drone.longitude);
-                const heading = droneTelemetries.find((telemetry) => telemetry.drone_id === drone.id)?.heading_deg ?? 90;
-                return (
-                  <button
-                    className={`command-map-marker drone ${selectedAsset?.id === drone.id ? "is-selected" : ""}`}
-                    key={drone.id}
-                    type="button"
-                    style={{ ...position, transform: `translate(-50%, -50%) rotate(${heading}deg)` }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      selectAsset("drone", drone.id);
-                    }}
-                  >
-                    ▲
-                  </button>
-                );
-              })}
-
-              {sensorAssets.map((sensor) => (
-                <button
-                  className={`command-map-marker sensor ${selectedAsset?.id === sensor.id ? "is-selected" : ""}`}
-                  key={sensor.id}
-                  type="button"
-                  style={projectPoint(sensor.latitude, sensor.longitude)}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    selectAsset("sensor", sensor.id);
-                  }}
-                >
-                  S
-                </button>
-              ))}
-
-              {deterrentAssets.map((device) => (
-                <button
-                  className={`command-map-marker deterrent ${selectedAsset?.id === device.id ? "is-selected" : ""}`}
-                  key={device.id}
-                  type="button"
-                  style={projectPoint(device.latitude, device.longitude)}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    selectAsset("deterrent", device.id);
-                  }}
-                >
-                  D
-                </button>
-              ))}
-
-              {drawPoints.length > 0 ? (
-                <svg className="command-draw-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <polyline
-                    fill="none"
-                    points={drawPoints
-                      .map((point) => {
-                        const left = ((point.longitude - cityBounds.west) / (cityBounds.east - cityBounds.west)) * 100;
-                        const top = ((cityBounds.north - point.latitude) / (cityBounds.north - cityBounds.south)) * 100;
-                        return `${left},${top}`;
-                      })
-                      .join(" ")}
-                    stroke="rgba(233, 192, 98, 0.92)"
-                    strokeDasharray="3 2"
-                    strokeWidth="0.5"
-                  />
-                </svg>
-              ) : null}
-            </div>
-
-            <div className="command-map-footer">
-              <div>
-                <strong>Draw mode</strong>
-                <span>{drawMode ?? "off"}</span>
-              </div>
-              <div>
-                <strong>Selected points</strong>
-                <span>{drawPoints.length}</span>
-              </div>
-              <div>
-                <strong>Linked layers</strong>
-                <span>{overlayCounts.threats.length || threatAlerts.length} threat overlays · {overlayCounts.sensors.length || sensorAssets.length} sensors</span>
+              <div className="command-chip-row">
+                {systemHealthCards.slice(0, 3).map((card) => (
+                  <span key={card.label}>{card.label}: {card.value}</span>
+                ))}
               </div>
             </div>
           </section>
-        </main>
 
-        <aside className="command-right-panel">
-          <div className="command-panel-header">
-            <div>
-              <span className="command-kicker">Context</span>
-              <h3>
-                {selectedAsset?.kind === "drone" && "Drone view"}
-                {selectedAsset?.kind === "camera" && "City camera view"}
-                {selectedAsset?.kind === "sensor" && "Sensor and deterrent view"}
-                {selectedAsset?.kind === "deterrent" && "Deterrent control view"}
-                {selectedAsset?.kind === "alert" && "Threat intelligence view"}
-                {!selectedAsset && "Select an asset"}
-              </h3>
-            </div>
-            {selectedAsset ? <CommandStatusBadge label={selectedAsset.kind} /> : null}
-          </div>
+          <div className="command-drone-layout">
+            <section className="command-panel-shell command-drone-video-panel">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Drone camera feed</span>
+                  <h3>Full camera feed</h3>
+                </div>
+                <CommandStatusBadge label={selectedFeedMode} />
+              </div>
 
-          {selectedAsset?.kind === "drone" && activeDroneRegistry ? (
-            <div className="command-context-stack">
+              <div className="command-feed-mode-row">
+                {availableFeedModes.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={selectedFeedMode === mode ? "is-active" : ""}
+                    onClick={() => setSelectedFeedMode(mode)}
+                  >
+                    {mode.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              <div className="command-video-stage">
+                <div className="command-video-feed">
+                  <span>{selectedFeedMode.toUpperCase()} camera stream</span>
+                  <strong>{activeDroneFeed?.stream_url ?? "Awaiting stream"}</strong>
+                </div>
+              </div>
+
+              <div className="command-panel-header compact">
+                <div>
+                  <span className="command-kicker">Gimbal controls</span>
+                  <h3>Precise camera handling</h3>
+                </div>
+              </div>
+
+              <div className="command-gimbal-grid">
+                <button type="button" onClick={() => handleGimbalMove(8, 0)}>Tilt up</button>
+                <button type="button" onClick={() => handleGimbalMove(-8, 0)}>Tilt down</button>
+                <button type="button" onClick={() => handleGimbalMove(0, -12)}>Yaw left</button>
+                <button type="button" onClick={() => handleGimbalMove(0, 12)}>Yaw right</button>
+              </div>
+
+              <div className="command-action-row">
+                <button
+                  type="button"
+                  onClick={() => appendLocalLog("camera", `Snapshot captured from ${activeDroneFeed?.camera_id ?? focusedDroneId}`, {
+                    assetId: focusedDroneId,
+                    sourceLabel: activeDroneFeed?.camera_id ?? focusedDroneId,
+                  })}
+                >
+                  Snapshot
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecordingEnabled((current) => !current);
+                    appendLocalLog("camera", `${recordingEnabled ? "Recording stopped" : "Recording started"} for ${focusedDroneId}`, {
+                      assetId: focusedDroneId,
+                      sourceLabel: activeDroneFeed?.camera_id ?? focusedDroneId,
+                      severity: "warning",
+                    });
+                  }}
+                >
+                  {recordingEnabled ? "Stop record" : "Record"}
+                </button>
+              </div>
+            </section>
+
+            <aside className="command-panel-shell command-drone-sidebar">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Drone telemetry panel</span>
+                  <h3>Flight telemetry</h3>
+                </div>
+              </div>
+
+              <div className="command-metrics-grid">
+                <div><span>Battery</span><strong>{Math.round(activeDroneTelemetry?.battery_percent ?? 0)}%</strong></div>
+                <div><span>GPS</span><strong>{telemetryPosition.latitude.toFixed(4)}, {telemetryPosition.longitude.toFixed(4)}</strong></div>
+                <div><span>Altitude</span><strong>{Math.round(telemetryPosition.altitude_m ?? 0)} m</strong></div>
+                <div><span>Speed</span><strong>{(activeDroneTelemetry?.speed_mps ?? 0).toFixed(1)} m/s</strong></div>
+                <div><span>Heading</span><strong>{Math.round(activeDroneTelemetry?.heading_deg ?? 0)}°</strong></div>
+                <div><span>Link quality</span><strong>{Math.round((activeDroneTelemetry?.link_quality ?? 0) * 100)}%</strong></div>
+                <div><span>Flight mode</span><strong>{activeDroneTelemetry?.flight_mode ?? "standby"}</strong></div>
+                <div><span>Payload status</span><strong>{activeDroneRegistry?.payload_supported ? "ready" : "offline"}</strong></div>
+                <div><span>Sensor status</span><strong>{activeDroneRegistry?.sensors.join(", ") ?? "n/a"}</strong></div>
+                <div><span>Mission</span><strong>{activeDroneMission?.name ?? "No mission"}</strong></div>
+              </div>
+
               <section className="command-context-card">
-                <h4>{activeDroneRegistry.model}</h4>
-                <div className="command-metrics-grid">
-                  <div><span>Status</span><strong>{activeDroneTelemetry?.status ?? activeDroneRegistry.status}</strong></div>
-                  <div><span>Battery</span><strong>{Math.round(activeDroneTelemetry?.battery_percent ?? 0)}%</strong></div>
-                  <div><span>Position</span><strong>{(activeDroneTelemetry?.position.latitude ?? drones[0]?.latitude ?? 0).toFixed(4)}, {(activeDroneTelemetry?.position.longitude ?? drones[0]?.longitude ?? 0).toFixed(4)}</strong></div>
-                  <div><span>Altitude</span><strong>{Math.round(activeDroneTelemetry?.position.altitude_m ?? activeDroneMission?.altitude_m ?? 0)} m</strong></div>
-                  <div><span>Speed</span><strong>{(activeDroneTelemetry?.speed_mps ?? activeDroneMission?.speed_mps ?? 0).toFixed(1)} m/s</strong></div>
-                  <div><span>Heading</span><strong>{Math.round(activeDroneTelemetry?.heading_deg ?? 0)}°</strong></div>
-                </div>
-
-                <div className="command-chip-row">
-                  {activeDroneRegistry.camera_types.map((cameraType) => <span key={cameraType}>{cameraType}</span>)}
-                  {activeDroneRegistry.sensors.map((sensor) => <span key={sensor}>{sensor}</span>)}
-                  {activeDroneRegistry.payload_supported ? <span>payload enabled</span> : null}
-                </div>
-
+                <h4>Mission snapshot</h4>
                 <div className="command-mission-card">
-                  <div>
-                    <span>Mission</span>
-                    <strong>{activeDroneMission?.name ?? "No mission assigned"}</strong>
-                  </div>
                   <div>
                     <span>Progress</span>
                     <strong>{activeDroneMission?.progress_percent ?? 0}%</strong>
@@ -934,241 +915,225 @@ export default function Dashboard() {
                   </div>
                 </div>
               </section>
+            </aside>
+          </div>
 
-              <section className="command-context-card">
-                <h4>Flight controls</h4>
-                <div className="command-control-grid">
-                  <button type="button" onClick={() => dispatchDroneAction("takeoff")}>Takeoff</button>
-                  <button type="button" onClick={() => dispatchDroneAction("land")}>Land</button>
-                  <button type="button" onClick={() => dispatchDroneAction("return_to_base")}>Return to base</button>
-                  <button type="button" onClick={() => dispatchDroneAction("hover")}>Hold position</button>
-                </div>
-
-                <div className="command-form-block">
-                  <label>
-                    <span>Assign mission</span>
-                    <select value={selectedMissionId} onChange={(event) => setSelectedMissionId(event.target.value)}>
-                      {missionItems.map((mission) => (
-                        <option key={mission.mission_id} value={mission.mission_id}>{mission.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="command-inline-actions">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const mission = missionItems.find((candidate) => candidate.mission_id === selectedMissionId);
-                        if (mission) {
-                          assignMission(mission);
-                        }
-                      }}
-                    >
-                      Assign mission
-                    </button>
-                    <button type="button" onClick={uploadQuickMission}>Create quick mission</button>
-                  </div>
-                </div>
-              </section>
-
-              <section className="command-context-card">
-                <h4>Linked alerts</h4>
-                <div className="command-list-block">
-                  {linkedAlerts.length > 0 ? linkedAlerts.map((alert) => (
-                    <button key={alert.alert_id} type="button" className="command-line-button" onClick={() => selectAsset("alert", alert.alert_id)}>
-                      <span>{alert.title}</span>
-                      <CommandStatusBadge label={alert.threat_level} />
-                    </button>
-                  )) : <p>No active alerts linked to this drone.</p>}
-                </div>
-              </section>
+          <section className="command-panel-shell command-flight-bar">
+            <div className="command-panel-header">
+              <div>
+                <span className="command-kicker">Bottom controls</span>
+                <h3>Flight controls</h3>
+              </div>
             </div>
-          ) : null}
 
-          {selectedAsset?.kind === "camera" && activeCamera ? (
-            <div className="command-context-stack">
-              <section className="command-context-card">
-                <h4>{activeCamera.device_id}</h4>
-                <div className="command-video-shell">
-                  <div className="command-video-feed">
-                    <span>Live surveillance feed</span>
-                    <strong>{activeCameraFeed?.stream_url ?? "Awaiting stream"}</strong>
-                  </div>
-                </div>
-                <div className="command-metrics-grid">
-                  <div><span>Stream status</span><strong>{activeCamera.stream_status}</strong></div>
-                  <div><span>Battery</span><strong>{activeCamera.battery_level ?? 100}%</strong></div>
-                  <div><span>Pan</span><strong>{activeCameraFeed?.gimbal.yaw_deg ?? 0}°</strong></div>
-                  <div><span>Tilt</span><strong>{activeCameraFeed?.gimbal.pitch_deg ?? 0}°</strong></div>
-                  <div><span>Zoom</span><strong>{activeCameraFeed?.gimbal.zoom_level ?? 1}x</strong></div>
-                  <div><span>Detections</span><strong>{activeCameraFeed?.ai_detections.length ?? 0}</strong></div>
-                </div>
-              </section>
-
-              <section className="command-context-card">
-                <h4>Camera controls</h4>
-                <div className="command-control-grid">
-                  <button type="button" onClick={() => appendLocalLog("command", `Pan left on ${activeCamera.device_id}`)}>Pan left</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Tilt up on ${activeCamera.device_id}`)}>Tilt up</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Zoom in on ${activeCamera.device_id}`)}>Zoom in</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Snapshot captured from ${activeCamera.device_id}`)}>Snapshot</button>
-                  <button type="button" onClick={() => appendLocalLog("alert", `Operator tagged suspicious activity on ${activeCamera.device_id}`)}>Tag event</button>
-                </div>
-              </section>
-
-              <section className="command-context-card">
-                <h4>Linked sensors and alerts</h4>
-                <div className="command-list-block">
-                  {sensors.filter((sensor) => sensor.linkedCameraIds.includes(activeCamera.device_id)).map((sensor) => (
-                    <button key={sensor.id} type="button" className="command-line-button" onClick={() => selectAsset("sensor", sensor.id)}>
-                      <span>{sensor.name}</span>
-                      <CommandStatusBadge label={sensor.status} />
-                    </button>
-                  ))}
-                </div>
-                <div className="command-list-block">
-                  {threatAlerts.filter((alert) => alert.source_ids.includes(activeCamera.device_id)).map((alert) => (
-                    <button key={alert.alert_id} type="button" className="command-line-button" onClick={() => selectAsset("alert", alert.alert_id)}>
-                      <span>{alert.title}</span>
-                      <CommandStatusBadge label={alert.threat_level} />
-                    </button>
-                  ))}
-                </div>
-              </section>
+            <div className="command-flight-controls-grid">
+              <button type="button" onClick={() => dispatchDroneAction("takeoff")}>Takeoff</button>
+              <button type="button" onClick={() => dispatchDroneAction("land")}>Land</button>
+              <button type="button" onClick={() => dispatchDroneAction("return_to_base")}>Return to base</button>
+              <button type="button" onClick={() => dispatchDroneAction("hover")}>Hold position</button>
+              <button
+                type="button"
+                className="command-danger-button"
+                onClick={() => appendLocalLog("command", `Emergency stop flagged for ${focusedDroneId}`, {
+                  severity: "critical",
+                  assetId: focusedDroneId,
+                  sourceLabel: activeDroneRegistry?.model ?? focusedDroneId,
+                })}
+              >
+                Emergency stop
+              </button>
             </div>
-          ) : null}
+          </section>
+        </div>
+      ) : null}
 
-          {selectedAsset?.kind === "sensor" && activeSensor ? (
-            <div className="command-context-stack">
-              <section className="command-context-card">
-                <h4>{activeSensor.name}</h4>
-                <div className="command-metrics-grid">
-                  <div><span>Status</span><strong>{activeSensor.status}</strong></div>
-                  <div><span>Current reading</span><strong>{activeSensor.currentValue} {activeSensor.unit}</strong></div>
-                  <div><span>Threshold</span><strong>{activeSensor.category === "magnetic/em" ? "8.0 mT" : "operator-defined"}</strong></div>
-                  <div><span>Last triggered</span><strong>{formatTime(activeSensor.lastTriggeredAt)}</strong></div>
+      {activeScreen === "map" ? (
+        <div className="command-screen command-map-screen">
+          <div className="command-map-layout">
+            <aside className="command-panel-shell command-map-tools">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Map Screen</span>
+                  <h3>Mission tools</h3>
                 </div>
-              </section>
+              </div>
 
-              <section className="command-context-card">
-                <h4>Linked assets</h4>
-                <div className="command-list-block">
-                  {linkedCameraAssets.map((camera) => (
-                    <button key={camera.id} type="button" className="command-line-button" onClick={() => selectAsset("camera", camera.id)}>
-                      <span>{camera.label}</span>
-                      <CommandStatusBadge label={camera.status} />
-                    </button>
+              <label className="command-form-block">
+                <span>Mission drone</span>
+                <select value={focusedDroneId} onChange={(event) => selectAsset("drone", event.target.value)}>
+                  {droneRegistry.map((drone) => (
+                    <option key={drone.drone_id} value={drone.drone_id}>{drone.model}</option>
                   ))}
-                  {drones.filter((drone) => activeSensor.linkedDroneIds.includes(drone.id)).map((drone) => (
-                    <button key={drone.id} type="button" className="command-line-button" onClick={() => selectAsset("drone", drone.id)}>
-                      <span>{drone.label}</span>
-                      <CommandStatusBadge label={drone.status} />
-                    </button>
-                  ))}
+                </select>
+              </label>
+
+              <div className="command-action-stack">
+                <button type="button" onClick={() => { setDrawMode("mission"); appendLocalLog("mission", "Mission drawing mode enabled", { assetId: focusedDroneId }); }}>Create mission</button>
+                <button type="button" onClick={() => { setDrawMode("mission"); appendLocalLog("mission", "Mission edit mode enabled", { assetId: focusedDroneId, severity: "warning" }); }}>Edit mission</button>
+                <button type="button" onClick={handleQuickMissionUpload}>Upload mission</button>
+                <button type="button" onClick={handleGoHere}>Quick Go Here</button>
+              </div>
+
+              <label className="command-search">
+                <span>Asset search</span>
+                <input
+                  value={assetFilter}
+                  onChange={(event) => setAssetFilter(event.target.value)}
+                  placeholder="Drone, camera, sensor, deterrent"
+                />
+              </label>
+
+              <div className="command-list-block">
+                {filteredAssets.slice(0, 8).map((asset) => (
+                  <button key={asset.id} type="button" className="command-line-button" onClick={() => selectAsset(asset.kind, asset.id)}>
+                    <span>{asset.label}</span>
+                    <CommandStatusBadge label={asset.status} />
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <main className="command-panel-shell command-map-stage-panel">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Mission + GPS view</span>
+                  <h3>Full map</h3>
                 </div>
-              </section>
+                <div className="command-map-actions">
+                  <button type="button" className={drawMode === "mission" ? "is-active" : ""} onClick={() => setDrawMode("mission")}>Mission route</button>
+                  <button type="button" className={drawMode === "geofence" ? "is-active" : ""} onClick={() => setDrawMode("geofence")}>Geofences</button>
+                  <button type="button" className={drawMode === "alert-zone" ? "is-active" : ""} onClick={() => setDrawMode("alert-zone")}>Alert zones</button>
+                  <button type="button" onClick={() => setDrawPoints([])}>Clear</button>
+                </div>
+              </div>
+
+              <div className="command-layer-row">
+                <span>Drone position, mission route, geofences, alert zones, sensors, and cameras</span>
+                <div>
+                  <CommandStatusBadge label={`${overlayCounts.geofences.length || zoneOverlays.length} zones`} />
+                  <CommandStatusBadge label={`${threatAlerts.length} alerts`} />
+                  <CommandStatusBadge label={`${sensorAssets.length} sensors`} />
+                </div>
+              </div>
+
+              <div className="command-map-shell">
+                <CommandCenterMap
+                  assets={mapAssets}
+                  threatAlerts={threatAlerts}
+                  zones={zoneOverlays}
+                  selectedAssetId={selectedAsset?.id ?? focusedDroneId}
+                  drawPoints={drawPoints}
+                  onMapClick={handleMapClick}
+                  onSelectAsset={(kind, id) => selectAsset(kind, id)}
+                />
+              </div>
+            </main>
+
+            <aside className="command-panel-shell command-map-side">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Mission details</span>
+                  <h3>Mission details</h3>
+                </div>
+              </div>
+
+              <div className="command-metrics-grid">
+                <div><span>Mission name</span><strong>{activeDroneMission?.name ?? "No mission assigned"}</strong></div>
+                <div><span>Progress</span><strong>{activeDroneMission?.progress_percent ?? 0}%</strong></div>
+                <div><span>ETA</span><strong>{Math.max(6, Math.round((100 - (activeDroneMission?.progress_percent ?? 0)) / 8))} min</strong></div>
+                <div><span>Waypoints</span><strong>{activeDroneMission?.waypoints.length ?? 0}</strong></div>
+              </div>
 
               <section className="command-context-card">
-                <h4>Recent history</h4>
+                <h4>Waypoint list</h4>
                 <div className="command-history-list">
-                  {activeSensor.history.length > 0 ? activeSensor.history.map((entry) => (
-                    <div key={`${entry.sensor_id}-${entry.observed_at}`} className="command-history-row">
-                      <span>{formatTime(entry.observed_at)}</span>
-                      <strong>{entry.value} {entry.unit}</strong>
+                  {(activeDroneMission?.waypoints ?? []).map((waypoint, index) => (
+                    <div key={`${waypoint.latitude}-${waypoint.longitude}-${index}`} className="command-history-row">
+                      <span>WP {index + 1}</span>
+                      <strong>{waypoint.latitude.toFixed(4)}, {waypoint.longitude.toFixed(4)}</strong>
                     </div>
-                  )) : <p>No recent history returned by Sensor Gateway.</p>}
-                </div>
-              </section>
-            </div>
-          ) : null}
-
-          {selectedAsset?.kind === "deterrent" && activeDeterrent ? (
-            <div className="command-context-stack">
-              <section className="command-context-card">
-                <h4>{activeDeterrent.name}</h4>
-                <div className="command-metrics-grid">
-                  <div><span>Status</span><strong>{activeDeterrent.status}</strong></div>
-                  <div><span>Zone</span><strong>{activeDeterrent.zone}</strong></div>
-                  <div><span>Roles</span><strong>{activeDeterrent.authorizedRoles.join(", ")}</strong></div>
-                  <div><span>Rule</span><strong>{activeDeterrent.rule}</strong></div>
-                </div>
-              </section>
-
-              <section className="command-context-card">
-                <h4>Controls</h4>
-                <div className="command-control-grid">
-                  <button type="button" onClick={() => appendLocalLog("command", `${activeDeterrent.name} activated`)}>Activate</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `${activeDeterrent.name} deactivated`)}>Deactivate</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Automation rule updated for ${activeDeterrent.name}`)}>Set automatic rule</button>
-                </div>
-              </section>
-            </div>
-          ) : null}
-
-          {selectedAsset?.kind === "alert" && activeThreatAlert ? (
-            <div className="command-context-stack">
-              <section className="command-context-card">
-                <h4>{activeThreatAlert.title}</h4>
-                <div className="command-metrics-grid">
-                  <div><span>Severity</span><strong>{activeThreatAlert.threat_level}</strong></div>
-                  <div><span>Confidence</span><strong>{Math.round(activeThreatAlert.confidence * 100)}%</strong></div>
-                  <div><span>Linked assets</span><strong>{activeThreatAlert.source_ids.join(", ")}</strong></div>
-                  <div><span>Map response</span><strong>Zoom to threat cluster</strong></div>
-                </div>
-              </section>
-
-              <section className="command-context-card">
-                <h4>Suggested actions</h4>
-                <div className="command-list-block">
-                  {activeThreatAlert.recommended_actions.map((action) => (
-                    <button key={action} type="button" className="command-line-button" onClick={() => appendLocalLog("command", `${action} triggered from ${activeThreatAlert.alert_id}`)}>
-                      <span>{action.replaceAll("-", " ")}</span>
-                      <CommandStatusBadge label={activeThreatAlert.threat_level} />
-                    </button>
                   ))}
                 </div>
               </section>
 
               <section className="command-context-card">
-                <h4>Alert response controls</h4>
-                <div className="command-control-grid">
-                  <button type="button" onClick={() => appendLocalLog("command", `Alert ${activeThreatAlert.alert_id} acknowledged`)}>Acknowledge</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Alert ${activeThreatAlert.alert_id} assigned to ${operatorName}`)}>Assign to operator</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Nearest drone dispatched for ${activeThreatAlert.alert_id}`)}>Dispatch nearest drone</button>
-                  <button type="button" onClick={() => appendLocalLog("command", `Linked deterrent activated for ${activeThreatAlert.alert_id}`)}>Activate deterrent</button>
+                <h4>Mission logs</h4>
+                <div className="command-log-list compact">
+                  {combinedLogs.filter((entry) => entry.category === "mission" && entry.assetId === focusedDroneId).slice(0, 5).map((entry) => (
+                    <div key={entry.id} className={`command-log-entry ${entry.category}`}>
+                      <span>{formatTime(entry.timestamp)}</span>
+                      <strong>{entry.severity}</strong>
+                      <p>{entry.message}</p>
+                    </div>
+                  ))}
                 </div>
               </section>
-            </div>
-          ) : null}
-        </aside>
-      </div>
 
-      <footer className="command-bottom-bar">
-        <section className="command-system-health">
-          <div className="command-panel-header compact">
-            <div>
-              <span className="command-kicker">Bottom bar</span>
-              <h3>Live telemetry and logs</h3>
-            </div>
+              {selectedAssetSummary ? (
+                <section className="command-context-card">
+                  <h4>Selected asset</h4>
+                  <div className="command-map-summary">
+                    <strong>{selectedAssetSummary.label}</strong>
+                    <span>{selectedAssetSummary.subtitle}</span>
+                    <CommandStatusBadge label={selectedAssetSummary.status} />
+                  </div>
+                </section>
+              ) : null}
+            </aside>
           </div>
 
-          <div className="command-health-grid">
-            {systemHealthCards.map((card) => (
-              <article key={card.label} className="command-health-card">
-                <span>{card.label}</span>
-                <strong>{card.value}</strong>
-              </article>
-            ))}
-          </div>
-        </section>
+          <footer className="command-panel-shell command-gps-strip">
+            <div><span>Lat/Lon</span><strong>{telemetryPosition.latitude.toFixed(5)}, {telemetryPosition.longitude.toFixed(5)}</strong></div>
+            <div><span>Altitude</span><strong>{Math.round(telemetryPosition.altitude_m ?? 0)} m</strong></div>
+            <div><span>Speed</span><strong>{(activeDroneTelemetry?.speed_mps ?? 0).toFixed(1)} m/s</strong></div>
+            <div><span>Heading</span><strong>{Math.round(activeDroneTelemetry?.heading_deg ?? 0)}°</strong></div>
+          </footer>
+        </div>
+      ) : null}
 
-        <section className="command-live-log">
-          <div className="command-log-header">
-            <div>
-              <span className="command-kicker">Event stream</span>
-              <h3>Telemetry, alerts, and commands</h3>
+      {activeScreen === "logs" ? (
+        <div className="command-screen command-log-screen">
+          <section className="command-panel-shell command-log-toolbar">
+            <div className="command-panel-header">
+              <div>
+                <span className="command-kicker">Logs Screen</span>
+                <h3>Telemetry logs and exports</h3>
+              </div>
+              <div className="command-export-row">
+                <button type="button" onClick={() => exportLogs("csv")}>Export CSV</button>
+                <button type="button" onClick={() => exportLogs("json")}>Export JSON</button>
+              </div>
             </div>
+
+            <div className="command-log-filter-grid">
+              <label className="command-form-block">
+                <span>Filter by drone</span>
+                <select value={logDroneFilter} onChange={(event) => setLogDroneFilter(event.target.value)}>
+                  <option value="all">All drones</option>
+                  {droneRegistry.map((drone) => (
+                    <option key={drone.drone_id} value={drone.drone_id}>{drone.model}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="command-form-block">
+                <span>Filter by date</span>
+                <input type="date" value={logDateFilter} onChange={(event) => setLogDateFilter(event.target.value)} />
+              </label>
+
+              <label className="command-form-block">
+                <span>Filter by severity</span>
+                <select value={logSeverityFilter} onChange={(event) => setLogSeverityFilter(event.target.value as "all" | LogSeverity)}>
+                  <option value="all">All severities</option>
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </label>
+            </div>
+
             <div className="command-log-filters">
-              {(["all", "alerts", "commands", "errors"] as const).map((filterOption) => (
+              {(["all", "telemetry", "mission", "camera", "sensor", "alert", "command"] as const).map((filterOption) => (
                 <button
                   key={filterOption}
                   type="button"
@@ -1179,19 +1144,83 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
+          </section>
+
+          <div className="command-log-grid">
+            <section className="command-panel-shell command-log-list-panel">
+              <div className="command-log-list tall">
+                {filteredLogs.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={`command-log-entry ${entry.category} ${selectedLog?.id === entry.id ? "is-selected" : ""}`}
+                    onClick={() => setSelectedLogId(entry.id)}
+                  >
+                    <span>{formatTime(entry.timestamp)}</span>
+                    <strong>{entry.category}</strong>
+                    <p>{entry.message}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <aside className="command-panel-shell command-log-detail">
+              <div className="command-panel-header">
+                <div>
+                  <span className="command-kicker">Log inspection</span>
+                  <h3>Raw MAVLink and ROS2</h3>
+                </div>
+                {selectedLog ? <CommandStatusBadge label={selectedLog.severity} /> : null}
+              </div>
+
+              {selectedLog ? (
+                <div className="command-context-stack">
+                  <section className="command-context-card">
+                    <h4>{selectedLog.sourceLabel}</h4>
+                    <div className="command-metrics-grid">
+                      <div><span>Type</span><strong>{selectedLog.category}</strong></div>
+                      <div><span>Severity</span><strong>{selectedLog.severity}</strong></div>
+                      <div><span>Timestamp</span><strong>{formatTime(selectedLog.timestamp)}</strong></div>
+                      <div><span>Drone</span><strong>{selectedLog.assetId ?? "n/a"}</strong></div>
+                    </div>
+                  </section>
+
+                  <section className="command-context-card">
+                    <h4>Message</h4>
+                    <p>{selectedLog.message}</p>
+                  </section>
+
+                  <section className="command-context-card">
+                    <h4>Raw MAVLink packets</h4>
+                    <pre className="command-code-block">{selectedLog.rawPacket}</pre>
+                  </section>
+
+                  <section className="command-context-card">
+                    <h4>ROS2 messages</h4>
+                    <pre className="command-code-block">{selectedLog.rosMessage}</pre>
+                  </section>
+                </div>
+              ) : (
+                <section className="command-context-card">
+                  <h4>No logs available</h4>
+                  <p>Adjust the filters or wait for the realtime stream to emit new records.</p>
+                </section>
+              )}
+            </aside>
           </div>
 
-          <div className="command-log-list">
-            {combinedLogs.map((entry) => (
-              <div className={`command-log-entry ${entry.category}`} key={entry.id}>
-                <span>{formatTime(entry.timestamp)}</span>
-                <strong>{entry.category}</strong>
-                <p>{entry.message}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </footer>
+          <section className="command-panel-shell command-log-health-row">
+            <div className="command-health-grid">
+              {systemHealthCards.map((card) => (
+                <article key={card.label} className="command-health-card">
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import Dashboard from "./Dashboard";
 
+vi.mock("@/components/CommandCenterMap", () => ({
+  default: () => <div aria-label="SmartCito city command map" />,
+}));
+
 vi.mock("@/api/controlPlane", () => ({
   useControlPlaneOverview: () => ({
     data: {
@@ -324,6 +328,10 @@ vi.mock("@/api/events", () => ({
   }),
 }));
 
+vi.mock("@/api/realtime", () => ({
+  useRealtimeCommandCenter: () => ({ snapshot: null, connected: false }),
+}));
+
 describe("Dashboard", () => {
   it("renders the command center layout", () => {
     const queryClient = new QueryClient();
@@ -335,10 +343,12 @@ describe("Dashboard", () => {
     );
 
     expect(screen.getByRole("heading", { name: /pretoria command center/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /operational map and live layers/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /drone view/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Drone Screen/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Map Screen/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Logs Screen/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Primary flight view/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Full camera feed/i })).toBeInTheDocument();
     expect(screen.getByText(/flight controls/i)).toBeInTheDocument();
-    expect(screen.getByText(/live telemetry and logs/i)).toBeInTheDocument();
-    expect(screen.getByText(/telemetry, alerts, and commands/i)).toBeInTheDocument();
+    expect(screen.getByText(/RGB camera stream/i)).toBeInTheDocument();
   });
 });

@@ -147,6 +147,14 @@ class Settings(BaseSettings):
     object_storage_endpoint: str = "file://./data/object_storage"
     object_storage_bucket: str = "smartcito-artifacts"
 
+    # ----- Realtime / service aggregation -----
+    drone_gateway_url: str = "http://drone-gateway:8020"
+    mission_control_url: str = "http://mission-control:8025"
+    drone_camera_url: str = "http://drone-camera-ingestion:8022"
+    threat_detection_url: str = "http://threat-detection:8023"
+    mapping_geospatial_url: str = "http://mapping-geospatial:8024"
+    realtime_snapshot_interval_seconds: float = 2.0
+
     # ----- Infra / deploy -----
     openstack_auth_url: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_AUTH_URL"))
     openstack_project: str | None = Field(default=None, validation_alias=AliasChoices("OPENSTACK_PROJECT"))

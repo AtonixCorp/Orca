@@ -30,6 +30,7 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        ws: true,
       },
       "/drone-gateway": {
         target: "http://localhost:8020",

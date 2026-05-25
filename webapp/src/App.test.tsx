@@ -5,12 +5,20 @@
  * ============================================================================
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "./App";
+
+vi.mock("@/components/CommandCenterMap", () => ({
+  default: () => <div aria-label="SmartCito city command map" />,
+}));
+
+vi.mock("@/api/realtime", () => ({
+  useRealtimeCommandCenter: () => ({ snapshot: null, connected: false }),
+}));
 
 describe("App", () => {
   it("opens the dashboard by default", async () => {
@@ -24,10 +32,7 @@ describe("App", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: /SmartCito/i, level: 1 }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { name: /Operations Dashboard/i }),
+      await screen.findByRole("heading", { name: /Pretoria Command Center/i }),
     ).toBeInTheDocument();
   });
 });
