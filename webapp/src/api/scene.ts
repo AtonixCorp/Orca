@@ -10,12 +10,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "./client";
 import { demoSmartMapDevices } from "./map";
+import type { SmartMapDevice } from "./map";
 
 export interface SceneDevice {
   id: string;
   device_id: string;
   name: string;
-  device_type: "usb" | "camera" | "gps" | "iot";
+  device_type: SmartMapDevice["device_type"];
   x: number;
   y: number;
   z: number;

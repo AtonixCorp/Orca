@@ -1,0 +1,295 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drone-gateway
+  namespace: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drone-gateway
+  template:
+    metadata:
+      labels:
+        app: drone-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8020"
+    spec:
+      containers:
+        - name: drone-gateway
+          image: smartcito/drone-gateway:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "surveillance.drone_gateway_service:app", "--host", "0.0.0.0", "--port", "8020"]
+          envFrom:
+            - configMapRef:
+                name: smartcito-platform-config
+            - secretRef:
+                name: smartcito-platform-secrets
+          env:
+            - name: DRONE_REGISTRY_ENABLED
+              value: "1"
+          ports:
+            - containerPort: 8020
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8020
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8020
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drone-gateway
+  namespace: backend
+spec:
+  selector:
+    app: drone-gateway
+  ports:
+    - port: 8020
+      targetPort: 8020
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-gateway
+  namespace: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sensor-gateway
+  template:
+    metadata:
+      labels:
+        app: sensor-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8021"
+    spec:
+      containers:
+        - name: sensor-gateway
+          image: smartcito/sensor-gateway:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "surveillance.sensor_gateway_service:app", "--host", "0.0.0.0", "--port", "8021"]
+          envFrom:
+            - configMapRef:
+                name: smartcito-platform-config
+            - secretRef:
+                name: smartcito-platform-secrets
+          ports:
+            - containerPort: 8021
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8021
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8021
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensor-gateway
+  namespace: backend
+spec:
+  selector:
+    app: sensor-gateway
+  ports:
+    - port: 8021
+      targetPort: 8021
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drone-camera-ingestion
+  namespace: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drone-camera-ingestion
+  template:
+    metadata:
+      labels:
+        app: drone-camera-ingestion
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8022"
+    spec:
+      containers:
+        - name: drone-camera-ingestion
+          image: smartcito/drone-camera-ingestion:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "surveillance.drone_camera_service:app", "--host", "0.0.0.0", "--port", "8022"]
+          envFrom:
+            - configMapRef:
+                name: smartcito-platform-config
+            - secretRef:
+                name: smartcito-platform-secrets
+          ports:
+            - containerPort: 8022
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8022
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8022
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drone-camera-ingestion
+  namespace: backend
+spec:
+  selector:
+    app: drone-camera-ingestion
+  ports:
+    - port: 8022
+      targetPort: 8022
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threat-detection
+  namespace: ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: threat-detection
+  template:
+    metadata:
+      labels:
+        app: threat-detection
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8023"
+    spec:
+      nodeSelector:
+        smartcito.io/accelerator: gpu-optional
+      containers:
+        - name: threat-detection
+          image: smartcito/threat-detection:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "surveillance.threat_detection_service:app", "--host", "0.0.0.0", "--port", "8023"]
+          envFrom:
+            - configMapRef:
+                name: smartcito-platform-config
+          ports:
+            - containerPort: 8023
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8023
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8023
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: threat-detection
+  namespace: ai
+spec:
+  selector:
+    app: threat-detection
+  ports:
+    - port: 8023
+      targetPort: 8023
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mapping-geospatial
+  namespace: visualization
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mapping-geospatial
+  template:
+    metadata:
+      labels:
+        app: mapping-geospatial
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8024"
+    spec:
+      containers:
+        - name: mapping-geospatial
+          image: smartcito/mapping-geospatial:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "surveillance.mapping_service:app", "--host", "0.0.0.0", "--port", "8024"]
+          envFrom:
+            - configMapRef:
+                name: smartcito-platform-config
+          ports:
+            - containerPort: 8024
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8024
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8024
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mapping-geospatial
+  namespace: visualization
+spec:
+  selector:
+    app: mapping-geospatial
+  ports:
+    - port: 8024
+      targetPort: 8024
+  type: ClusterIP

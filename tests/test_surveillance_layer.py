@@ -1,0 +1,152 @@
+import os
+
+os.environ["SMARTCITO_KAFKA_ENABLED"] = "0"
+os.environ["DRONE_REGISTRY_ENABLED"] = "0"
+
+from fastapi.testclient import TestClient
+
+from surveillance.drone_camera_service import app as camera_app
+from surveillance.drone_gateway_service import app as drone_app
+from surveillance.mapping_service import app as mapping_app
+from surveillance.sensor_gateway_service import app as sensor_app
+from surveillance.threat_detection_service import app as threat_app
+
+
+def test_drone_gateway_normalizes_telemetry() -> None:
+    client = TestClient(drone_app)
+    response = client.post(
+        "/telemetry",
+        json={
+            "drone_id": "drone-001",
+            "protocol": "mavlink",
+            "position": {"latitude": -25.7479, "longitude": 28.2293, "altitude_m": 120},
+            "speed_mps": 8.2,
+            "heading_deg": 90,
+            "battery_percent": 87,
+            "status": "in_mission",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["event"]["topic"] == "smartcito.drone.telemetry"
+    assert payload["event"]["payload"]["coordinate_system"] == "WGS84"
+    assert payload["event"]["payload"]["zone"]["zone_id"] == "zone-1-cbd"
+    assert payload["publish"]["status"] == "kafka-unavailable"
+
+
+def test_drone_gateway_discovers_capabilities_and_accepts_command() -> None:
+    client = TestClient(drone_app)
+    connected = client.post(
+        "/connect",
+        json={"drone_id": "drone-cap-001", "protocol": "simulated", "endpoint": "sim://drone-cap-001"},
+    )
+    assert connected.status_code == 200
+    capabilities = connected.json()
+    assert capabilities["drone_id"] == "drone-cap-001"
+    assert "thermal" in capabilities["camera_types"]
+    assert "imu" in capabilities["sensors"]
+
+    command = client.post(
+        "/drones/drone-cap-001/commands",
+        json={
+            "drone_id": "drone-cap-001",
+            "action": "move_to",
+            "target": {"latitude": -25.7454, "longitude": 28.2438, "altitude_m": 95},
+            "requested_by": "mission-control",
+        },
+    )
+    assert command.status_code == 200
+    payload = command.json()
+    assert payload["accepted"] is True
+    assert payload["event"]["event_type"] == "drone.command.move_to"
+
+
+def test_drone_gateway_rejects_incomplete_camera_command() -> None:
+    client = TestClient(drone_app)
+    response = client.post(
+        "/commands",
+        json={"drone_id": "drone-001", "action": "camera_zoom", "zoom_level": 4},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "camera actions require camera_id"
+
+
+def test_drone_gateway_metrics_endpoint() -> None:
+    client = TestClient(drone_app)
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "smartcito_drone_gateway_events_total" in response.text
+
+
+def test_sensor_gateway_splits_alert_topics() -> None:
+    client = TestClient(sensor_app)
+    response = client.post(
+        "/readings",
+        json={
+            "device_id": "perimeter-003",
+            "sensor_type": "motion",
+            "position": {"latitude": -25.744, "longitude": 28.242},
+            "value": 1,
+            "unit": "boolean",
+            "alert": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["event"]["topic"] == "smartcito.sensor.alerts"
+
+
+def test_camera_service_requires_stream_or_frame_url() -> None:
+    client = TestClient(camera_app)
+    missing = client.post("/frames", json={"drone_id": "drone-404"})
+    assert missing.status_code == 404
+
+    registered = client.post(
+        "/streams/register",
+        json={"drone_id": "drone-002", "stream_url": "rtsp://drone-002/main", "protocol": "rtsp"},
+    )
+    assert registered.status_code == 200
+
+    frame = client.post("/frames", json={"drone_id": "drone-002", "width": 640, "height": 360})
+    assert frame.status_code == 200
+    assert frame.json()["event"]["topic"] == "smartcito.drone.camera.frames"
+
+
+def test_threat_detection_classifies_critical_zone() -> None:
+    client = TestClient(threat_app)
+    response = client.post(
+        "/detections",
+        json={
+            "source_id": "drone-003-camera",
+            "source_type": "drone_camera",
+            "label": "weapon detected",
+            "confidence": 0.94,
+            "position": {"latitude": -25.745, "longitude": 28.245},
+        },
+    )
+
+    assert response.status_code == 200
+    alert = response.json()["event"]["payload"]
+    assert alert["threat_level"] == "critical"
+    assert "dispatch-nearest-drone" in alert["recommended_actions"]
+
+
+def test_mapping_service_exposes_overlays() -> None:
+    client = TestClient(mapping_app)
+    response = client.post(
+        "/overlays/drone",
+        json={
+            "drone_id": "drone-map-001",
+            "position": {"latitude": -25.7479, "longitude": 28.2293},
+            "battery_percent": 72,
+        },
+    )
+
+    assert response.status_code == 200
+    overview = client.get("/overlays")
+    assert overview.status_code == 200
+    assert overview.json()["drones"][0]["overlay_id"] == "drone-map-001"
+    assert overview.json()["geofences"]

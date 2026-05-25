@@ -224,6 +224,82 @@ services:
     restart: unless-stopped
     logging: *stdout-logging
 
+  drone-gateway:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${DRONE_GATEWAY_IMAGE:-smartcito/drone-gateway:local}
+    container_name: smartcito-drone-gateway
+    env_file: .env
+    command: ["uvicorn", "surveillance.drone_gateway_service:app", "--host", "0.0.0.0", "--port", "8020"]
+    ports:
+      - "${DRONE_GATEWAY_PORT:-8020}:8020"
+    depends_on:
+      - kafka
+      - postgres
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  sensor-gateway:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${SENSOR_GATEWAY_IMAGE:-smartcito/sensor-gateway:local}
+    container_name: smartcito-sensor-gateway
+    env_file: .env
+    command: ["uvicorn", "surveillance.sensor_gateway_service:app", "--host", "0.0.0.0", "--port", "8021"]
+    ports:
+      - "${SENSOR_GATEWAY_PORT:-8021}:8021"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  drone-camera-ingestion:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${DRONE_CAMERA_IMAGE:-smartcito/drone-camera-ingestion:local}
+    container_name: smartcito-drone-camera-ingestion
+    env_file: .env
+    command: ["uvicorn", "surveillance.drone_camera_service:app", "--host", "0.0.0.0", "--port", "8022"]
+    ports:
+      - "${DRONE_CAMERA_PORT:-8022}:8022"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  threat-detection:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${THREAT_DETECTION_IMAGE:-smartcito/threat-detection:local}
+    container_name: smartcito-threat-detection
+    env_file: .env
+    command: ["uvicorn", "surveillance.threat_detection_service:app", "--host", "0.0.0.0", "--port", "8023"]
+    ports:
+      - "${THREAT_DETECTION_PORT:-8023}:8023"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    logging: *stdout-logging
+
+  mapping-geospatial:
+    build:
+      context: .
+      dockerfile: surveillance/Dockerfile
+    image: ${MAPPING_GEOSPATIAL_IMAGE:-smartcito/mapping-geospatial:local}
+    container_name: smartcito-mapping-geospatial
+    env_file: .env
+    command: ["uvicorn", "surveillance.mapping_service:app", "--host", "0.0.0.0", "--port", "8024"]
+    ports:
+      - "${MAPPING_GEOSPATIAL_PORT:-8024}:8024"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    logging: *stdout-logging
+
   postgres:
     image: cgr.dev/chainguard/postgres:latest@sha256:34a4d686aa44583457bbdbdeb662243e7ab29e89e5c9b40df8e33baa6b75dc47
     container_name: smartcito-postgres

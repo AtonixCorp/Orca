@@ -57,6 +57,9 @@ class ControlPlaneService:
             "gps-service": OperatorControlState.RUNNING,
             "usb-service": OperatorControlState.RUNNING,
             "security-policies": OperatorControlState.RUNNING,
+            "drone-gateway": OperatorControlState.RUNNING,
+            "sensor-gateway": OperatorControlState.RUNNING,
+            "threat-detection": OperatorControlState.RUNNING,
         }
         self._map_devices: dict[str, MapDevice] = {}
         self._overview_cache_key = CacheKeyBuilder.build("api", "dashboard-summary", "control-plane-overview")
@@ -126,6 +129,14 @@ class ControlPlaneService:
                     status="monitoring",
                 )
             )
+        alerts.append(
+            SecurityAlert(
+                id="drone-surveillance-watch",
+                severity="high",
+                title="Drone and sensor surveillance correlation active",
+                status="monitoring",
+            )
+        )
 
         security = SecurityMonitorStatus(
             encryption_status="quantum-ready hybrid envelope active",
@@ -168,6 +179,14 @@ class ControlPlaneService:
                 throughput_hint="streaming",
                 destination="dashboards and audit",
             ),
+            DataFlowStage(
+                id="drone-surveillance",
+                name="Drone and sensor surveillance",
+                protocol="mavlink / rtsp / mqtt / kafka",
+                state=PipelineState.HEALTHY,
+                throughput_hint="telemetry + frames + alerts",
+                destination="spark + threat intelligence",
+            ),
         ]
 
         controls = [
@@ -202,6 +221,30 @@ class ControlPlaneService:
                 state=self._controls["security-policies"],
                 policy_mode="quantum-ready",
                 action_label=self._action_label(self._controls["security-policies"]),
+            ),
+            OperatorControl(
+                id="drone-gateway",
+                name="Drone Gateway",
+                description="Normalizes drone telemetry and command traffic for Kafka.",
+                state=self._controls["drone-gateway"],
+                policy_mode="mission-audited",
+                action_label=self._action_label(self._controls["drone-gateway"]),
+            ),
+            OperatorControl(
+                id="sensor-gateway",
+                name="Sensor Gateway",
+                description="Publishes fixed and mobile sensor readings into the surveillance stream.",
+                state=self._controls["sensor-gateway"],
+                policy_mode="schema-validated",
+                action_label=self._action_label(self._controls["sensor-gateway"]),
+            ),
+            OperatorControl(
+                id="threat-detection",
+                name="Threat Detection",
+                description="Correlates video, sensor, GPS, and geofence events into alerts.",
+                state=self._controls["threat-detection"],
+                policy_mode="ai-assisted",
+                action_label=self._action_label(self._controls["threat-detection"]),
             ),
         ]
 
@@ -317,6 +360,36 @@ class ControlPlaneService:
                 gps_path=[(-25.7472, 28.1868), (-25.7467, 28.1875), (-25.7461, 28.1881)],
                 last_seen_at=now,
             )
+            self._map_devices["drone-patrol-001"] = MapDevice(
+                id="drone-patrol-001",
+                device_id="drone-patrol-001",
+                name="Drone Patrol Unit 001",
+                device_type=DeviceCategory.DRONE,
+                latitude=-25.7454,
+                longitude=28.2438,
+                trust_score=94,
+                trust_level=DeviceTrustLevel.VERIFIED,
+                camera_feed_url="rtsp://drone-patrol-001/camera/main",
+                sensor_type="drone-telemetry",
+                sensor_value=0.88,
+                gps_path=[(-25.7479, 28.2293), (-25.7461, 28.2361), (-25.7454, 28.2438)],
+                last_seen_at=now,
+            )
+            self._map_devices["perimeter-sensor-003"] = MapDevice(
+                id="perimeter-sensor-003",
+                device_id="perimeter-sensor-003",
+                name="Perimeter Motion Sensor 003",
+                device_type=DeviceCategory.SENSOR,
+                latitude=-25.7448,
+                longitude=28.2455,
+                trust_score=91,
+                trust_level=DeviceTrustLevel.VERIFIED,
+                camera_feed_url=None,
+                sensor_type="motion",
+                sensor_value=0.92,
+                gps_path=[(-25.7452, 28.2442), (-25.7448, 28.2455)],
+                last_seen_at=now,
+            )
 
         devices.extend(device for device in self._map_devices.values() if device.trust_score > 80)
         devices = sorted(devices, key=self._last_seen_sort_key, reverse=True)
@@ -333,8 +406,8 @@ class ControlPlaneService:
         overview = MapOverview(
             devices=devices,
             heatmap=heatmap,
-            visible_layers=["verified-devices", "camera-overlays", "gps-paths", "sensor-heatmap"],
-            security_policy="verified devices only; trust score must be greater than 80; registration and map updates are audited",
+            visible_layers=["verified-devices", "camera-overlays", "gps-paths", "sensor-heatmap", "drone-patrols", "threat-zones"],
+            security_policy="verified devices only; trust score must be greater than 80; drone, sensor, camera, and map updates are audited",
         )
         cache_service.set_json(
             self._map_cache_key,

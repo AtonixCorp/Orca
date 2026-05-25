@@ -24,7 +24,7 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const [enabledLayers, setEnabledLayers] = useState(
-    () => new Set(["devices", "cameras", "paths", "heatmap"]),
+    () => new Set(["devices", "cameras", "drones", "paths", "heatmap", "threats"]),
   );
 
   const verifiedDevices = useMemo(
@@ -92,6 +92,19 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
       if (device.device_type === "camera" && !layerAllows("cameras", enabledLayers)) {
         return;
       }
+      if (device.device_type === "drone" && !layerAllows("drones", enabledLayers)) {
+        return;
+      }
+
+      if (layerAllows("threats", enabledLayers) && (device.sensor_value ?? 0) >= 0.85) {
+        L.circle([device.latitude, device.longitude], {
+          radius: 240,
+          color: "#f87171",
+          fillColor: "#f87171",
+          fillOpacity: 0.18,
+          weight: 2,
+        }).addTo(group);
+      }
 
       const icon = L.divIcon({
         className: "smart-map-pin",
@@ -147,8 +160,10 @@ export default function SmartMapPanel({ devices }: { devices: SmartMapDevice[] }
             {[
               ["devices", "Device pins"],
               ["cameras", "Camera overlays"],
+              ["drones", "Drone patrols"],
               ["paths", "GPS paths"],
               ["heatmap", "Sensor heatmap"],
+              ["threats", "Threat zones"],
             ].map(([layer, label]) => (
               <label key={layer}>
                 <input

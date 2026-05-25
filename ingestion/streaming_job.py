@@ -165,6 +165,20 @@ def main() -> None:
     kafka_bootstrap = _env("KAFKA_BROKER_URL", "kafka:9092")
     raw_topic = _env("KAFKA_RAW_EVENTS_TOPIC", "smartcito.sensors.raw")
     alerts_topic = _env("KAFKA_ALERTS_TOPIC", "smartcito.alerts")
+    surveillance_topics = _env(
+        "KAFKA_SURVEILLANCE_TOPICS",
+        ",".join(
+            [
+                raw_topic,
+                _env("KAFKA_DRONE_TELEMETRY_TOPIC", "smartcito.drone.telemetry"),
+                _env("KAFKA_DRONE_EVENTS_TOPIC", "smartcito.drone.events"),
+                _env("KAFKA_DRONE_CAMERA_FRAMES_TOPIC", "smartcito.drone.camera.frames"),
+                _env("KAFKA_SENSOR_ALERTS_TOPIC", "smartcito.sensor.alerts"),
+                _env("KAFKA_THREAT_ALERTS_TOPIC", "smartcito.threat.alerts"),
+                _env("KAFKA_LOCATION_ENRICHED_TOPIC", "smartcito.location.enriched"),
+            ]
+        ),
+    )
     checkpoint_dir = _env("SPARK_CHECKPOINT_DIR", "/opt/spark/checkpoints")
     object_storage_path = _env("SPARK_OBJECT_STORAGE_PATH", "/opt/spark/object-store")
     spark_master = _env("SPARK_MASTER_URL", "local[*]")
@@ -178,7 +192,7 @@ def main() -> None:
     source = (
         spark.readStream.format("kafka")
         .option("kafka.bootstrap.servers", kafka_bootstrap)
-        .option("subscribe", raw_topic)
+        .option("subscribe", surveillance_topics)
         .option("startingOffsets", "latest")
         .load()
     )

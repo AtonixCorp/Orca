@@ -27,6 +27,8 @@ class DeviceCategory(str, Enum):
     CAMERA = "camera"
     GPS = "gps"
     IOT = "iot"
+    DRONE = "drone"
+    SENSOR = "sensor"
 
 
 class OperatorControlState(str, Enum):

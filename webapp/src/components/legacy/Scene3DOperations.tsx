@@ -154,6 +154,9 @@ export default function Scene3DOperations({ devices = demoDevices }: { devices?:
     animate();
 
     function handleResize() {
+      if (!mount) {
+        return;
+      }
       const nextWidth = mount.clientWidth;
       const nextHeight = mount.clientHeight || 480;
       camera.aspect = nextWidth / nextHeight;
@@ -167,7 +170,7 @@ export default function Scene3DOperations({ devices = demoDevices }: { devices?:
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
-      if (mount.contains(renderer.domElement)) {
+      if (mount?.contains(renderer.domElement)) {
         mount.removeChild(renderer.domElement);
       }
     };

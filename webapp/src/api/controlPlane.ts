@@ -18,7 +18,7 @@ export type PipelineState = "healthy" | "degraded" | "blocked";
 export interface ManagedDevice {
   id: string;
   name: string;
-  category: "usb" | "camera" | "gps" | "iot";
+  category: "usb" | "camera" | "gps" | "iot" | "drone" | "sensor";
   trust_level: DeviceTrustLevel;
   driver_container: string;
   endpoint: string;

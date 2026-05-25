@@ -112,6 +112,22 @@ The dashboard renders:
 - Confidence-scored unified location
 - 3D operational scene (`webapp/src/components/ThreeDashboardPanel.tsx`)
 
+## Drone and Surveillance Layer
+
+The drone and surveillance layer adds deployable services for drone telemetry,
+drone commands, drone camera frame metadata, fixed/mobile sensor readings,
+geospatial enrichment, and AI threat detection. These services publish to Kafka,
+feed Spark Streaming and storage, and surface drone patrols, sensors, camera
+links, heatmaps, and threat zones in the operator dashboard.
+
+The Drone Gateway is the single drone-facing service. It discovers drone
+capabilities, syncs the PostgreSQL Drone Registry, streams normalized telemetry,
+validates Mission Control commands, and dispatches those commands through
+vendor-agnostic adapters.
+
+See [surveillance/README.md](surveillance/README.md) for service APIs,
+Kafka topics, Kubernetes deployment, Docker Compose usage, and validation steps.
+
 ---
 
 ## Repository Layout
@@ -121,6 +137,7 @@ The dashboard renders:
 | `citosmart/` | Primary FastAPI application, schemas, services, and migrations |
 | `ingestion/` | External data ingestion pipelines and connectors |
 | `services/` | Deployable microservice workspace for separately scoped services |
+| `surveillance/` | Drone gateway, sensor gateway, drone camera ingestion, mapping, and threat services |
 | `database/` | Shared database bootstrap and initialization assets |
 | `ai_models/` | AI/ML inference services and model packaging |
 | `webapp/` | Primary React frontend for operators |

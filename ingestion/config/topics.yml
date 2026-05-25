@@ -6,3 +6,11 @@ topics:
   raw_events: smartcito.events.raw
   clean_events: smartcito.events.clean
   sensor_readings: smartcito.sensors.raw
+  sensor_alerts: smartcito.sensor.alerts
+  drone_telemetry: smartcito.drone.telemetry
+  drone_events: smartcito.drone.events
+  drone_missions: smartcito.drone.missions
+  drone_camera_frames: smartcito.drone.camera.frames
+  drone_camera_alerts: smartcito.drone.camera.alerts
+  threat_alerts: smartcito.threat.alerts
+  location_enriched: smartcito.location.enriched

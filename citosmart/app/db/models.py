@@ -74,6 +74,30 @@ class CameraDeviceORM(Base):
     )
 
 
+class DroneRegistryORM(Base):
+    """Persistent drone capability and registry record maintained by Drone Gateway."""
+
+    __tablename__ = "drone_registry"
+
+    drone_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    model: Mapped[str] = mapped_column(String(120), nullable=False)
+    firmware_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    max_speed_mps: Mapped[float] = mapped_column(Float, nullable=False)
+    max_altitude_m: Mapped[float] = mapped_column(Float, nullable=False)
+    battery_capacity_mah: Mapped[int] = mapped_column(Integer, nullable=False)
+    camera_types: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    sensors: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    payload_supported: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String(32), index=True, nullable=False, default="offline")
+    protocol: Mapped[str] = mapped_column(String(40), nullable=False, default="simulated")
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+
+
 class AuditEventORM(Base):
     """Persistent audit trail for camera registration and telemetry changes."""
 

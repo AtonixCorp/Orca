@@ -40,6 +40,14 @@ data:
   KAFKA_RAW_EVENTS_TOPIC: smartcito.events.raw
   KAFKA_CLEAN_EVENTS_TOPIC: smartcito.events.clean
   KAFKA_ALERTS_TOPIC: smartcito.alerts
+  KAFKA_SENSOR_ALERTS_TOPIC: smartcito.sensor.alerts
+  KAFKA_DRONE_TELEMETRY_TOPIC: smartcito.drone.telemetry
+  KAFKA_DRONE_EVENTS_TOPIC: smartcito.drone.events
+  KAFKA_DRONE_MISSIONS_TOPIC: smartcito.drone.missions
+  KAFKA_DRONE_CAMERA_FRAMES_TOPIC: smartcito.drone.camera.frames
+  KAFKA_DRONE_CAMERA_ALERTS_TOPIC: smartcito.drone.camera.alerts
+  KAFKA_THREAT_ALERTS_TOPIC: smartcito.threat.alerts
+  KAFKA_LOCATION_ENRICHED_TOPIC: smartcito.location.enriched
   OBJECT_STORAGE_ENDPOINT: s3://smartcito-artifacts
   OBJECT_STORAGE_BUCKET: smartcito-artifacts
   AI_MODELS_URL: http://ai-service.ai.svc.cluster.local
@@ -91,6 +99,14 @@ data:
   KAFKA_RAW_EVENTS_TOPIC: smartcito.events.raw
   KAFKA_CLEAN_EVENTS_TOPIC: smartcito.events.clean
   KAFKA_ALERTS_TOPIC: smartcito.alerts
+  KAFKA_SENSOR_ALERTS_TOPIC: smartcito.sensor.alerts
+  KAFKA_DRONE_TELEMETRY_TOPIC: smartcito.drone.telemetry
+  KAFKA_DRONE_EVENTS_TOPIC: smartcito.drone.events
+  KAFKA_DRONE_MISSIONS_TOPIC: smartcito.drone.missions
+  KAFKA_DRONE_CAMERA_FRAMES_TOPIC: smartcito.drone.camera.frames
+  KAFKA_DRONE_CAMERA_ALERTS_TOPIC: smartcito.drone.camera.alerts
+  KAFKA_THREAT_ALERTS_TOPIC: smartcito.threat.alerts
+  KAFKA_LOCATION_ENRICHED_TOPIC: smartcito.location.enriched
   OBJECT_STORAGE_ENDPOINT: s3://smartcito-artifacts
   OBJECT_STORAGE_BUCKET: smartcito-artifacts
   AI_MODELS_URL: http://ai-service.ai.svc.cluster.local
@@ -126,6 +142,9 @@ data:
   OBJECT_STORAGE_ENDPOINT: s3://smartcito-artifacts
   OBJECT_STORAGE_BUCKET: smartcito-artifacts
   KAFKA_BROKER_URL: kafka-bootstrap.data-platform.svc.cluster.local:9092
+  KAFKA_DRONE_CAMERA_FRAMES_TOPIC: smartcito.drone.camera.frames
+  KAFKA_DRONE_CAMERA_ALERTS_TOPIC: smartcito.drone.camera.alerts
+  KAFKA_THREAT_ALERTS_TOPIC: smartcito.threat.alerts
   AUTH_ISSUER: smartcito.local
   AUTH_AUDIENCE: smartcito-clients
 ---
@@ -152,6 +171,9 @@ data:
   MEMCACHED_SERVERS: memcached-0.memcached-internal.data-platform.svc.cluster.local:11211,memcached-1.memcached-internal.data-platform.svc.cluster.local:11211,memcached-2.memcached-internal.data-platform.svc.cluster.local:11211
   MEMCACHED_API_TTL_SECONDS: "60"
   KAFKA_BROKER_URL: kafka-bootstrap.data-platform.svc.cluster.local:9092
+  KAFKA_SENSOR_ALERTS_TOPIC: smartcito.sensor.alerts
+  KAFKA_DRONE_TELEMETRY_TOPIC: smartcito.drone.telemetry
+  KAFKA_THREAT_ALERTS_TOPIC: smartcito.threat.alerts
   OBJECT_STORAGE_ENDPOINT: s3://smartcito-artifacts
   OBJECT_STORAGE_BUCKET: smartcito-artifacts
   AUTH_ISSUER: smartcito.local
@@ -213,6 +235,12 @@ data:
   KAFKA_RAW_EVENTS_TOPIC: smartcito.events.raw
   KAFKA_CLEAN_EVENTS_TOPIC: smartcito.events.clean
   KAFKA_ALERTS_TOPIC: smartcito.alerts
+  KAFKA_SENSOR_ALERTS_TOPIC: smartcito.sensor.alerts
+  KAFKA_DRONE_TELEMETRY_TOPIC: smartcito.drone.telemetry
+  KAFKA_DRONE_EVENTS_TOPIC: smartcito.drone.events
+  KAFKA_DRONE_CAMERA_FRAMES_TOPIC: smartcito.drone.camera.frames
+  KAFKA_THREAT_ALERTS_TOPIC: smartcito.threat.alerts
+  KAFKA_LOCATION_ENRICHED_TOPIC: smartcito.location.enriched
   OBJECT_STORAGE_ENDPOINT: s3a://smartcito-artifacts
   OBJECT_STORAGE_BUCKET: smartcito-artifacts
   SPARK_CHECKPOINT_DIR: /opt/spark/checkpoints/smartcito
