@@ -31,6 +31,31 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      "/drone-gateway": {
+        target: "http://localhost:8020",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/drone-gateway/, ""),
+      },
+      "/mission-control": {
+        target: "http://localhost:8025",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/mission-control/, ""),
+      },
+      "/mapping-geospatial": {
+        target: "http://localhost:8024",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/mapping-geospatial/, ""),
+      },
+      "/drone-camera": {
+        target: "http://localhost:8022",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/drone-camera/, ""),
+      },
+      "/threat-detection": {
+        target: "http://localhost:8023",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/threat-detection/, ""),
+      },
     },
   },
   test: {

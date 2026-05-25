@@ -13,6 +13,7 @@ import { lazy, Suspense } from "react";
 import RecentReadingsPanel from "@/components/RecentReadingsPanel";
 import DataFlowViewPanel from "@/components/DataFlowViewPanel";
 import DeviceManagerPanel from "@/components/DeviceManagerPanel";
+import DroneOperationsPanel from "@/components/DroneOperationsPanel";
 import OperatorControlsPanel from "@/components/OperatorControlsPanel";
 import RegisteredCamerasPanel from "@/components/RegisteredCamerasPanel";
 import SecurityMonitorPanel from "@/components/SecurityMonitorPanel";
@@ -56,6 +57,7 @@ export default function Dashboard() {
 
       <div className="dashboard-grid">
         <SmartMapPanel devices={mapDevices} />
+        <DroneOperationsPanel />
         <DeviceManagerPanel devices={data?.devices ?? []} />
         <RegisteredCamerasPanel />
         <SecurityMonitorPanel

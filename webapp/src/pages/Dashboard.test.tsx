@@ -143,6 +143,114 @@ vi.mock("@/api/scene", () => ({
   }),
 }));
 
+vi.mock("@/api/droneGateway", () => ({
+  demoDroneFleet: {
+    drones: [
+      {
+        drone_id: "drone-patrol-001",
+        protocol: "simulated",
+        position: { latitude: -25.7454, longitude: 28.2438, altitude_m: 95 },
+        speed_mps: 8.2,
+        heading_deg: 90,
+        battery_percent: 87,
+        link_quality: 0.96,
+        flight_mode: "patrol",
+        status: "in_mission",
+        health_flags: [],
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    registry: [
+      {
+        drone_id: "drone-patrol-001",
+        model: "SmartCito Simulated Patrol Drone",
+        firmware_version: "sim-1.0.0",
+        max_speed_mps: 18,
+        max_altitude_m: 500,
+        battery_capacity_mah: 6000,
+        camera_types: ["rgb", "thermal", "zoom"],
+        sensors: ["gps", "imu", "barometer"],
+        payload_supported: true,
+        status: "online",
+        protocol: "simulated",
+        last_seen_at: new Date().toISOString(),
+      },
+    ],
+  },
+  demoDroneMission: {
+    mission_id: "mission-patrol-cbd-001",
+    drone_id: "drone-patrol-001",
+    name: "CBD perimeter patrol",
+    status: "uploaded",
+    altitude_m: 95,
+    speed_mps: 8,
+    progress_percent: 42,
+    waypoints: [
+      { latitude: -25.7479, longitude: 28.2293, altitude_m: 95, hold_seconds: 10 },
+      { latitude: -25.7454, longitude: 28.2438, altitude_m: 95, hold_seconds: 12 },
+    ],
+  },
+  demoCameraFeed: {
+    drone_id: "drone-patrol-001",
+    stream_url: "rtsp://drone-patrol-001/camera/main",
+    preview_url: "/drone-camera/streams/drone-patrol-001/preview",
+    camera_id: "rgb-main",
+    ai_detections: [{ label: "vehicle", confidence: 0.91 }],
+    gimbal: { pitch_deg: -18, yaw_deg: 32, zoom_level: 3 },
+  },
+  demoThreatAlerts: [
+    {
+      alert_id: "threat-drone-patrol-001",
+      title: "High surveillance event: perimeter motion",
+      threat_level: "high",
+      source_ids: ["drone-patrol-001", "perimeter-sensor-003"],
+      confidence: 0.86,
+      recommended_actions: ["notify-operator"],
+    },
+  ],
+  useDroneGatewayReady: () => ({
+    data: {
+      service: "drone-gateway",
+      topics: {
+        telemetry: "smartcito.drone.telemetry",
+        events: "smartcito.drone.events",
+      },
+      protocols: ["simulated", "mavlink"],
+      registry: "synced",
+    },
+    isError: false,
+  }),
+  useDroneFleet: () => ({
+    data: {
+      drones: [],
+      registry: [
+        {
+          drone_id: "drone-patrol-001",
+          model: "SmartCito Simulated Patrol Drone",
+          firmware_version: "sim-1.0.0",
+          max_speed_mps: 18,
+          max_altitude_m: 500,
+          battery_capacity_mah: 6000,
+          camera_types: ["rgb", "thermal", "zoom"],
+          sensors: ["gps", "imu", "barometer"],
+          payload_supported: true,
+          status: "online",
+          protocol: "simulated",
+          last_seen_at: new Date().toISOString(),
+        },
+      ],
+    },
+  }),
+  useDroneGatewayMetrics: () => ({ data: 'smartcito_drone_gateway_events_total{event="commands_accepted"} 1' }),
+  useDroneMissions: () => ({ data: [] }),
+  useMappingOverlays: () => ({ data: { drones: [], sensors: [], threats: [], geofences: [] } }),
+  useCameraFeeds: () => ({ data: [] }),
+  useThreatAlerts: () => ({ data: [] }),
+  useUploadDroneMission: () => ({ isPending: false, mutate: vi.fn() }),
+  useConnectDrone: () => ({ isPending: false, mutate: vi.fn(), data: undefined }),
+  useSendDroneCommand: () => ({ isPending: false, mutate: vi.fn(), data: undefined }),
+}));
+
 describe("Dashboard", () => {
   it("renders control-plane modules", async () => {
     const queryClient = new QueryClient();
@@ -156,6 +264,16 @@ describe("Dashboard", () => {
     expect(screen.getByRole("heading", { name: /Device Manager/i })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /SmartCito 3D Dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /SmartCito Map/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Drone Operations/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Infrastructure Configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Kubernetes Configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /OpenStack Configuration/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Drone Status Panel/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Drone Capability Panel/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Live Map View/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Mission Planner/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Camera Feed Panel/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Alerts & Threat Detection Panel/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Security Monitor/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Data Flow View/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Operator Controls/i })).toBeInTheDocument();
