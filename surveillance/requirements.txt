@@ -1,7 +1,7 @@
 fastapi==0.115.2
 uvicorn[standard]==0.32.0
 kafka-python==2.0.2
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 SQLAlchemy==2.0.36
 psycopg[binary]==3.2.3
 pymavlink==2.4.43
