@@ -1,8 +1,15 @@
-auth_url            = "https://openstack.example.com:5000/v3"
-project_name        = "smartcito"
-username            = "smartcito-admin"
-password            = "change-me"
+# Preferred when you already have ~/.config/openstack/clouds.yaml
+cloud_name          = "openstack"
 region              = "RegionOne"
+
+# Optional direct credentials if you are not using clouds.yaml.
+# auth_url            = "https://openstack.example.com:5000/v3"
+# project_id          = "00000000000000000000000000000000"
+# project_name        = "smartcito"
+# username            = "smartcito-admin"
+# password            = "change-me"
+# user_domain_name    = "Default"
+
 external_network_id = "public-network-id"
 image_name          = "smartcito-os-ubuntu-22.04-2026.05"
 key_pair            = "smartcito-keypair"

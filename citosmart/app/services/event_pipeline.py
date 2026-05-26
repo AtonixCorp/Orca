@@ -140,13 +140,55 @@ class EventPipelineService:
         if anomaly_score < 0.8:
             return None
 
+        classification_payload = {
+            "category": "general",
+            "severity": "high" if anomaly_score >= 0.95 else "medium",
+            "confidence": anomaly_score,
+            "recommended_action": "Escalate to mission control and request operator acknowledgement.",
+            "requires_human_review": True,
+        }
+        summary = f"Anomaly score {anomaly_score:.2f} for {clean_event.entity_id}"
+
+        try:
+            classification_payload = await ai_client.classify_alert(
+                message=summary,
+                source=clean_event.source,
+                tags=[
+                    clean_event.event_type,
+                    str(clean_event.payload.get("kind", "unknown")),
+                    str(clean_event.metadata.get("processed_by", "event-pipeline")),
+                ],
+                anomaly_score=anomaly_score,
+            )
+            summary = await ai_client.summarize_event(
+                title=f"{str(classification_payload.get('category', 'general')).title()} alert",
+                classification=str(classification_payload.get("category", "general")),
+                severity=str(classification_payload.get("severity", "medium")),
+                location=clean_event.entity_id,
+                alerts=[
+                    f"Anomaly score {anomaly_score:.2f}",
+                    f"Sensor kind {clean_event.payload.get('kind', 'unknown')}",
+                ],
+                sensor_readings={
+                    "value": float(clean_event.payload.get("value", 0.0)),
+                },
+                max_sentences=2,
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
         alert = AlertEvent(
             id=str(uuid4()),
-            severity="high" if anomaly_score >= 0.95 else "medium",
-            title="Anomaly detected",
-            message=f"Anomaly score {anomaly_score:.2f} for {clean_event.entity_id}",
+            severity=str(classification_payload.get("severity", "medium")),
+            title=f"{str(classification_payload.get('category', 'general')).title()} alert",
+            message=summary,
             created_at=datetime.now(UTC),
-            payload={"event_id": clean_event.event_id, "score": anomaly_score},
+            payload={
+                "event_id": clean_event.event_id,
+                "score": anomaly_score,
+                "classification": classification_payload,
+                "source": clean_event.source,
+            },
         )
         self._alerts.appendleft(alert)
         if publisher is not None:

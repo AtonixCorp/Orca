@@ -10,21 +10,27 @@ terraform {
 }
 
 provider "openstack" {
-  auth_url    = var.auth_url
-  tenant_name = var.project_name
-  user_name   = var.username
-  password    = var.password
-  region      = var.region
+  cloud            = var.cloud_name
+  auth_url         = var.auth_url
+  tenant_id        = var.project_id
+  tenant_name      = var.project_name
+  user_name        = var.username
+  password         = var.password
+  region           = var.region
+  user_domain_name = var.user_domain_name
 }
 
 module "networking" {
   source = "./networking"
 
+  cloud_name          = var.cloud_name
   auth_url            = var.auth_url
+  project_id          = var.project_id
   project_name        = var.project_name
   username            = var.username
   password            = var.password
   region              = var.region
+  user_domain_name    = var.user_domain_name
   external_network_id = var.external_network_id
 
   public_subnet_cidr   = var.public_subnet_cidr
@@ -39,11 +45,14 @@ module "networking" {
 module "compute" {
   source = "./compute"
 
+  cloud_name   = var.cloud_name
   auth_url   = var.auth_url
+  project_id = var.project_id
   project_name = var.project_name
   username   = var.username
   password   = var.password
   region     = var.region
+  user_domain_name = var.user_domain_name
 
   image_name            = var.image_name
   key_pair              = var.key_pair
@@ -86,11 +95,14 @@ module "compute" {
 module "storage" {
   source = "./storage"
 
+  cloud_name   = var.cloud_name
   auth_url     = var.auth_url
+  project_id   = var.project_id
   project_name = var.project_name
   username     = var.username
   password     = var.password
   region       = var.region
+  user_domain_name = var.user_domain_name
 
   database_volume_size_gb      = var.database_volume_size_gb
   object_storage_volume_size_gb = var.object_storage_volume_size_gb

@@ -398,6 +398,10 @@ class FrameMetadata(BaseModel):
     preview_url: str | None = None
     width: int | None = Field(default=None, ge=1)
     height: int | None = Field(default=None, ge=1)
+    image_b64: str | None = None
+    ai_backend: Literal["auto", "heuristic", "opencv", "yolo"] = "auto"
+    ai_labels: list[str] = Field(default_factory=list)
+    detection_threshold: float = Field(default=0.6, ge=0, le=1)
 
 
 class SensorReading(BaseModel):

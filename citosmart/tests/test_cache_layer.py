@@ -33,15 +33,18 @@ class FakeMemcacheClient:
 
 
 class FakeAIResponse:
+    def __init__(self, payload: dict[str, object] | None = None) -> None:
+        self._payload = payload or {"score": 0.91}
+
     def raise_for_status(self) -> None:
         return None
 
-    def json(self) -> dict[str, float]:
-        return {"score": 0.91}
+    def json(self) -> dict[str, object]:
+        return self._payload
 
 
 class FakeAIAsyncClient:
-    calls: list[tuple[str, dict[str, list[float]]]] = []
+    calls: list[tuple[str, dict[str, object]]] = []
 
     def __init__(self, *args, **kwargs) -> None:  # noqa: D401, ANN003
         pass
@@ -52,8 +55,25 @@ class FakeAIAsyncClient:
     async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
         return None
 
-    async def post(self, url: str, json: dict[str, list[float]]) -> FakeAIResponse:
+    async def post(self, url: str, json: dict[str, object]) -> FakeAIResponse:
         self.calls.append((url, json))
+        if url.endswith("/detect_objects"):
+            return FakeAIResponse(
+                {
+                    "backend": "heuristic",
+                    "requested_backend": str(json.get("backend", "auto")),
+                    "image_width": 20,
+                    "image_height": 20,
+                    "detections": [
+                        {
+                            "label": "vehicle",
+                            "confidence": 0.91,
+                            "bbox": [1, 2, 8, 10],
+                            "area_ratio": 0.18,
+                        }
+                    ],
+                }
+            )
         return FakeAIResponse()
 
 
@@ -260,4 +280,18 @@ def test_ai_inference_results_are_cached(monkeypatch) -> None:
 
         assert first == 0.91
         assert second == 0.91
+        assert len(FakeAIAsyncClient.calls) == 1
+
+
+def test_ai_object_detection_results_are_cached(monkeypatch) -> None:
+    FakeAIAsyncClient.calls.clear()
+    with _use_fake_cache():
+        import httpx
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeAIAsyncClient)
+        first = asyncio.run(ai_client.detect_objects(image_b64="AA==", labels=["vehicle"], threshold=0.5))
+        second = asyncio.run(ai_client.detect_objects(image_b64="AA==", labels=["vehicle"], threshold=0.5))
+
+        assert first["detections"][0]["label"] == "vehicle"
+        assert second["detections"][0]["confidence"] == 0.91
         assert len(FakeAIAsyncClient.calls) == 1

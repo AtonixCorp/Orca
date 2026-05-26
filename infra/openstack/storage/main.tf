@@ -10,11 +10,14 @@ terraform {
 }
 
 provider "openstack" {
-  auth_url    = var.auth_url
-  tenant_name = var.project_name
-  user_name   = var.username
-  password    = var.password
-  region      = var.region
+  cloud            = var.cloud_name
+  auth_url         = var.auth_url
+  tenant_id        = var.project_id
+  tenant_name      = var.project_name
+  user_name        = var.username
+  password         = var.password
+  region           = var.region
+  user_domain_name = var.user_domain_name
 }
 
 resource "openstack_blockstorage_volume_v3" "database_volume" {

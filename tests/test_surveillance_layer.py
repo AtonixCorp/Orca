@@ -12,6 +12,7 @@ from surveillance import geospatial
 from surveillance.mapping_service import app as mapping_app
 from surveillance.mission_control_service import app as mission_app
 from surveillance import mission_control_service
+from surveillance import drone_camera_service
 from surveillance.robot_gateway_service import app as robot_app
 from surveillance.sensor_gateway_service import app as sensor_app
 from surveillance.threat_detection_service import app as threat_app
@@ -169,6 +170,56 @@ def test_camera_service_requires_stream_or_frame_url() -> None:
     feeds = client.get("/feeds")
     assert feeds.status_code == 200
     assert feeds.json()[0]["drone_id"] == "drone-002"
+
+
+def test_camera_service_enriches_frame_with_ai_detections(monkeypatch) -> None:
+    async def fake_detect_objects(**kwargs) -> dict[str, object]:
+        assert kwargs["backend"] == "auto"
+        return {
+            "backend": "opencv",
+            "requested_backend": "auto",
+            "image_width": 20,
+            "image_height": 20,
+            "detections": [
+                {
+                    "label": "vehicle",
+                    "confidence": 0.92,
+                    "bbox": [2, 3, 14, 16],
+                    "area_ratio": 0.21,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(drone_camera_service.ai_client, "detect_objects", fake_detect_objects)
+
+    client = TestClient(camera_app)
+    registered = client.post(
+        "/streams/register",
+        json={"drone_id": "drone-ai-001", "stream_url": "rtsp://drone-ai-001/main", "protocol": "rtsp"},
+    )
+    assert registered.status_code == 200
+
+    frame = client.post(
+        "/frames",
+        json={
+            "drone_id": "drone-ai-001",
+            "width": 640,
+            "height": 360,
+            "image_b64": "AA==",
+            "ai_labels": ["vehicle"],
+        },
+    )
+
+    assert frame.status_code == 200
+    payload = frame.json()["event"]["payload"]
+    assert "image_b64" not in payload
+    assert payload["ai_analysis"]["backend"] == "opencv"
+    assert payload["ai_analysis"]["detections"][0]["label"] == "vehicle"
+
+    feeds = client.get("/feeds")
+    assert feeds.status_code == 200
+    matching_feed = next(feed for feed in feeds.json() if feed["drone_id"] == "drone-ai-001")
+    assert matching_feed["ai_detections"][0]["label"] == "vehicle"
 
 
 def test_mission_control_validates_and_uploads_patrol() -> None:

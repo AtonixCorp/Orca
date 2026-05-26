@@ -65,12 +65,13 @@ The Drone Registry persists:
 1. Drones and sensors send telemetry, video metadata, readings, and alerts.
 2. Drone Gateway and Sensor Gateway normalize payloads into SmartCito event envelopes.
 3. Drone Camera Ingestion registers live streams and publishes frame metadata for AI analysis.
-4. Kafka carries drone, camera, sensor, location, and threat topics in real time.
-5. Spark Streaming subscribes to the surveillance topic set, enriches events, stores batches in PostgreSQL/HDFS/HBase, and forwards alert-like payloads.
-6. Threat Detection turns detections and correlated events into actionable alerts.
-7. Mapping and Geospatial converts GPS positions into dashboard overlays, geofences, patrol routes, and heatmap intensity.
-8. The React dashboard and Plotly Dash surfaces show drone positions, verified sensors, live camera links, threat zones, and timelines.
-9. Operators send commands back to drones through the Drone Gateway API.
+4. When a frame includes `image_b64`, Drone Camera Ingestion calls the shared AI service `/detect_objects` endpoint and stores summarized detections on the frame event and feed status.
+5. Kafka carries drone, camera, sensor, location, and threat topics in real time.
+6. Spark Streaming subscribes to the surveillance topic set, enriches events, stores batches in PostgreSQL/HDFS/HBase, and forwards alert-like payloads.
+7. Threat Detection turns detections and correlated events into actionable alerts.
+8. Mapping and Geospatial converts GPS positions into dashboard overlays, geofences, patrol routes, and heatmap intensity.
+9. The React dashboard and Plotly Dash surfaces show drone positions, verified sensors, live camera links, threat zones, and timelines.
+10. Operators send commands back to drones through the Drone Gateway API.
 
 ## Local Run
 
@@ -163,6 +164,14 @@ curl -X POST http://localhost:8022/streams/register \
 curl -X POST http://localhost:8022/frames \
   -H 'content-type: application/json' \
   -d '{"drone_id": "drone-001", "width": 1280, "height": 720}'
+```
+
+To request camera-side object detection during ingestion, include a base64-encoded image and optionally pin the backend:
+
+```bash
+curl -X POST http://localhost:8022/frames \
+  -H 'content-type: application/json' \
+  -d '{"drone_id": "drone-001", "width": 1280, "height": 720, "image_b64": "<base64-png>", "ai_backend": "auto", "ai_labels": ["vehicle"]}'
 ```
 
 Publish a sensor alert:

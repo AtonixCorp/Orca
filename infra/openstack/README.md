@@ -36,12 +36,48 @@ The promoted default image is auto-loaded from [infra/openstack/zz-smartcito-os.
 
 ## Apply Flow
 
+Terraform can authenticate to OpenStack in either of these ways:
+
+- Preferred: use a named profile from `clouds.yaml` with `cloud_name`.
+- Legacy: set `auth_url`, `project_name` or `project_id`, `username`, `password`, and optional `user_domain_name` directly in `terraform.tfvars`.
+
 ```bash
 cp infra/openstack/terraform.tfvars.example infra/openstack/terraform.tfvars
+export OS_CLIENT_CONFIG_FILE="$HOME/.config/openstack/clouds.yaml"
 terraform -chdir=infra/openstack init
 terraform -chdir=infra/openstack plan
 terraform -chdir=infra/openstack apply
 ```
+
+Example `clouds.yaml` profile for this stack:
+
+```yaml
+clouds:
+  openstack:
+    auth:
+      auth_url: http://172.27.112.36/identity
+      username: admin
+      password: YOUR_PASSWORD
+      project_id: b4e15aaf3bcd41c69934f585febaa845
+      project_name: demo
+      user_domain_name: Default
+    region_name: RegionOne
+    interface: public
+    identity_api_version: 3
+```
+
+Then point Terraform at that profile in `infra/openstack/terraform.tfvars`:
+
+```hcl
+cloud_name          = "openstack"
+region              = "RegionOne"
+external_network_id = "public-network-id"
+image_name          = "smartcito-os-ubuntu-22.04-2026.05"
+key_pair            = "smartcito-keypair"
+```
+
+If Keystone requires a versioned endpoint in your environment, prefer
+`http://172.27.112.36/identity/v3` for `auth_url` in `clouds.yaml`.
 
 Recommended image setting after promotion:
 

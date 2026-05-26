@@ -1,22 +1,42 @@
+variable "cloud_name" {
+  type    = string
+  default = null
+}
+
 variable "auth_url" {
-  type = string
+  type    = string
+  default = null
+}
+
+variable "project_id" {
+  type    = string
+  default = null
 }
 
 variable "project_name" {
-  type = string
+  type    = string
+  default = null
 }
 
 variable "username" {
-  type = string
+  type    = string
+  default = null
 }
 
 variable "password" {
   type      = string
   sensitive = true
+  default   = null
 }
 
 variable "region" {
-  type = string
+  type    = string
+  default = null
+}
+
+variable "user_domain_name" {
+  type    = string
+  default = null
 }
 
 variable "database_volume_size_gb" {

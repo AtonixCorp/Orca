@@ -1,0 +1,11 @@
+version: 2
+distro_name: smartcito-passthrough
+apis:
+  - inference
+providers:
+  inference:
+    - provider_id: passthrough
+      provider_type: remote::passthrough
+      config:
+        base_url: ${env.PASSTHROUGH_URL:=http://127.0.0.1:11434}
+        api_key: ${env.PASSTHROUGH_API_KEY:=}
