@@ -29,6 +29,7 @@ scikit-learn==1.5.2               # Classical ML / anomaly detection
 
 # ---- Databases & ORM ----
 SQLAlchemy==2.0.36                # Sync + async ORM
+greenlet==3.1.1                   # Required by SQLAlchemy async session internals
 asyncpg==0.31.0                   # PostgreSQL async driver (Python 3.13 compatible)
 psycopg2-binary==2.9.10           # PostgreSQL sync driver (used by Spark/tools)
 GeoAlchemy2==0.15.2               # PostGIS / geometry column support

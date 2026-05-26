@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String
@@ -59,6 +59,27 @@ class SensorReadingORM(Base):
     __table_args__ = (
         # Composite index for common time-bounded queries per sensor.
         Index("ix_sensor_readings_sensor_observed", "sensor_id", "observed_at"),
+    )
+
+
+class GPSPointORM(Base):
+    """Persistent representation of an ingested GPS point."""
+
+    __tablename__ = "gps_points"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lon: Mapped[float] = mapped_column(Float, nullable=False)
+    speed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    heading: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_gps_points_device_ts", "device_id", "ts"),
     )
 
 

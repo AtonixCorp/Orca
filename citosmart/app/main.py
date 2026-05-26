@@ -37,6 +37,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.graphql.schema import graphql_router
+from app.services.gps_mqtt_ingestor import GPSMqttIngestor
 from app.services.ingestion import ingestion_service
 from app.services.kafka_stream import KafkaPublisher
 from app.services.mqtt_ingestor import MqttIngestor
@@ -64,6 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     app.state.kafka = None
     app.state.mqtt_task = None
+    app.state.gps_mqtt_task = None
 
     # ---- Kafka publisher ---------------------------------------------------
     if settings.kafka_publisher_enabled:
@@ -99,6 +101,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("MQTT bridge started → %s:%s [%s]",
                     settings.mqtt_host, settings.mqtt_port, settings.mqtt_topic)
 
+    # ---- GPS MQTT bridge ---------------------------------------------------
+    if settings.gps_mqtt_enabled:
+        gps_ingestor = GPSMqttIngestor(
+            host=settings.mqtt_host,
+            port=settings.mqtt_port,
+            topic=settings.gps_mqtt_topic,
+            client_id=settings.gps_mqtt_client_id,
+        )
+        app.state.gps_mqtt_task = asyncio.create_task(gps_ingestor.run(), name="gps-mqtt-ingestor")
+        logger.info(
+            "GPS MQTT bridge started → %s:%s [%s]",
+            settings.mqtt_host,
+            settings.mqtt_port,
+            settings.gps_mqtt_topic,
+        )
+
     try:
         yield
     finally:
@@ -108,6 +126,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.mqtt_task.cancel()
             try:
                 await app.state.mqtt_task
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+
+        if app.state.gps_mqtt_task is not None:
+            app.state.gps_mqtt_task.cancel()
+            try:
+                await app.state.gps_mqtt_task
             except (asyncio.CancelledError, Exception):  # noqa: BLE001
                 pass
 
