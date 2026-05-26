@@ -7,6 +7,7 @@ KIND_NAME="${KIND_NAME:-smartcito}"
 KIND_VERSION="${KIND_VERSION:-v0.23.0}"
 KIND_BIN="${KIND_BIN:-$ROOT_DIR/.bin/kind}"
 KIND_GATEWAY_PORT="${KIND_GATEWAY_PORT:-18088}"
+CNPG_OPERATOR_MANIFEST_URL="${CNPG_OPERATOR_MANIFEST_URL:-https://raw.githubusercontent.com/cloudnative-pg/artifacts/release-1.29/manifests/operator-manifest.yaml}"
 
 log() {
   printf '[smartcito-k8s] %s\n' "$*"
@@ -65,6 +66,39 @@ preload_local_images() {
   "$KIND_CMD" load docker-image --name "$KIND_NAME" "${images[@]}"
 }
 
+fetch_url_to_stdout() {
+  local url="$1"
+  if command -v curl >/dev/null 2>&1; then
+    curl -sSfL "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- "$url"
+  else
+    printf 'Missing curl or wget for fetching %s\n' "$url" >&2
+    exit 1
+  fi
+}
+
+install_cnpg_operator() {
+  if kubectl get deployment -n cnpg-system cnpg-controller-manager >/dev/null 2>&1; then
+    log "CloudNativePG operator already installed"
+  else
+    log "Installing CloudNativePG operator"
+    fetch_url_to_stdout "$CNPG_OPERATOR_MANIFEST_URL" | kubectl apply --server-side -f -
+  fi
+
+  kubectl rollout status deployment/cnpg-controller-manager -n cnpg-system --timeout=300s
+}
+
+migrate_local_database() {
+  if kubectl get statefulset -n database postgres >/dev/null 2>&1; then
+    log "Removing legacy local postgres StatefulSet before applying CNPG cluster"
+    kubectl delete statefulset -n database postgres --ignore-not-found --wait=true
+    kubectl delete service -n database postgres --ignore-not-found --wait=true
+    kubectl delete service -n database postgres-primary --ignore-not-found --wait=true
+    kubectl delete service -n database postgres-replica --ignore-not-found --wait=true
+  fi
+}
+
 ensure_cluster() {
   if kubectl cluster-info >/dev/null 2>&1; then
     log "Using existing Kubernetes context: $(kubectl config current-context 2>/dev/null || echo unknown)"
@@ -102,18 +136,24 @@ wait_for_rollout() {
   kubectl rollout status -n "$namespace" "$resource" --timeout=300s
 }
 
+wait_for_cnpg_cluster() {
+  kubectl wait --for=condition=Ready cluster/postgres -n database --timeout=600s
+}
+
 main() {
   require_command kubectl
   require_command docker
 
   ensure_cluster
   preload_local_images
+  install_cnpg_operator
+  migrate_local_database
 
   log "Applying local SmartCito overlay"
   kubectl kustomize --load-restrictor LoadRestrictionsNone "$K8S_DIR/local" | kubectl apply -f -
 
   log "Waiting for core workloads"
-  wait_for_rollout database statefulset/postgres
+  wait_for_cnpg_cluster
   wait_for_rollout data-platform deployment/kafka
   wait_for_rollout data-platform statefulset/memcached
   wait_for_rollout backend deployment/citosmart-api
