@@ -1,8 +1,12 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = "1.15.4"
 
-  backend "local" {
-    path = "terraform.tfstate"
+  cloud {
+    organization = "AtonixCorp-Platform"
+
+    workspaces {
+      name = "Smartcito"
+    }
   }
 
   required_providers {
