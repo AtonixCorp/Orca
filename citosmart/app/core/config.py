@@ -139,6 +139,12 @@ class Settings(BaseSettings):
     mqtt_port: int = 1883
     mqtt_topic: str = "smartcito/sensors/+"
     mqtt_client_id: str = "smartcito-api"
+    gps_mqtt_enabled: bool = False
+    gps_mqtt_topic: str = "smartcito/gps/+"
+    gps_mqtt_client_id: str = "smartcito-gps-api"
+    gps_udp_enabled: bool = False
+    gps_udp_host: str = "0.0.0.0"
+    gps_udp_port: int = 9011
 
     # ----- Observability -----
     audit_log_enabled: bool = True
