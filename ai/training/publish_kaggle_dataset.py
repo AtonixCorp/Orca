@@ -41,12 +41,18 @@ def build_metadata(args: argparse.Namespace) -> dict[str, object]:
         "title": args.title,
         "id": f"{args.owner}/{args.slug}",
         "licenses": [{"name": args.license_name}],
-        "keywords": ["ai", "lora", "iot", "robotics", "geospatial"],
-        "subtitle": "Sovereign SmartCito training, inference, and synthetic data bundle",
+        "keywords": [
+            "artificial intelligence",
+            "computer vision",
+            "deep learning",
+            "geospatial analysis",
+        ],
+        "subtitle": "SmartCito training, inference, and synthetic data bundle",
         "description": (
-            "SmartCito bundle for LoRA/QLoRA fine-tuning, offline evaluation, and Kaggle-based collaboration. "
-            "Ships SmartCito code, synthetic or private datasets, notebooks, and docs only. "
-            "No LLaMA-3 or other foundation-model weights are included."
+            "SmartCito Model is the AI workspace for SmartCito operational intelligence. "
+            "This Kaggle bundle packages model structure, ingestion pipelines, datasets, training logic, notebooks, and documentation "
+            "for navigation, mapping, alerts, sensor fusion, weather analysis, and satellite-driven operational reasoning. "
+            "SmartCito is designed to build on a compatible LLaMA-3 foundation model, but foundation-model weights are not included in this bundle."
         ),
         "isPrivate": bool(args.private),
     }

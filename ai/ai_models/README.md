@@ -2,6 +2,20 @@
 
 Computer vision, local LLM inference, and predictive analytics models for SmartCito.
 
+## About This File
+
+This file documents the SmartCito AI workspace and explains how the AI-facing parts of the project fit together. It gives developers and contributors a clear view of the model structure, ingestion paths, datasets, training flow, and runtime inference surfaces used across SmartCito.
+
+It is intended to help readers understand:
+
+- how SmartCito collects and processes operational data;
+- how raw events are converted into training-ready records;
+- how the SmartCito Model is trained from structured datasets;
+- how inference supports navigation, mapping, alerts, and operational reasoning;
+- how the project stays maintainable through versioned datasets and a clear folder layout.
+
+Use this README as the entry point for understanding how GPS, map, sensor, weather, and satellite-related data move through the SmartCito AI system and where to extend it safely.
+
 This service now supports multiple inference modes:
 
 - Numeric anomaly scoring through `/infer` for existing SmartCito callers.
