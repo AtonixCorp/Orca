@@ -5,6 +5,12 @@ production deployments. It complements the software implementation in
 [`../citosmart/`](../citosmart/) and [`../webapp/`](../webapp/) and the local
 Docker stack in [`../docker-compose.yml`](../docker-compose.yml).
 
+## Container Image
+
+- Build file: `hardware/Dockerfile`
+- What the image does: runs the FastAPI hardware-domain API on port `8014` for reference-stack, monitoring, and edge hardware contract endpoints.
+- What ships in the image: the `hardware/` package and this README at `/app/hardware/README.md`.
+
 ## Layout
 
 ```

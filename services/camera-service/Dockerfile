@@ -19,6 +19,7 @@ RUN python -m venv "$VIRTUAL_ENV"
 COPY services/camera-service/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY services/camera-service/app.py /srv/app.py
+COPY services/camera-service/README.md /srv/README.md
 
 FROM runtime
 COPY --from=builder /srv /srv

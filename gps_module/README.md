@@ -2,6 +2,12 @@
 
 GPS and satellite-based positioning integration for SmartCito.
 
+## Container Image
+
+- Build file: `gps_module/Dockerfile`
+- What the image does: runs the FastAPI GPS-domain API on port `8011` for NMEA parsing, standards lookup, and location stream normalization.
+- What ships in the image: the `gps_module/` package and this README at `/app/gps_module/README.md`.
+
 ## Capabilities
 
 - Live device + asset tracking via `gpsd` or serial NMEA

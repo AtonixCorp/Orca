@@ -16,6 +16,12 @@ It is intended to help readers understand:
 
 Use this README as the entry point for understanding how GPS, map, sensor, weather, and satellite-related data move through the SmartCito AI system and where to extend it safely.
 
+## Container Image
+
+- Build file: `ai/ai_models/Dockerfile`
+- What the image does: runs the FastAPI AI inference API on port `8012` with `uvicorn ai.ai_models.inference:app`.
+- What ships in the image: the `ai/` workspace, model runtime code, and this README at `/app/ai/ai_models/README.md`.
+
 This service now supports multiple inference modes:
 
 - Numeric anomaly scoring through `/infer` for existing SmartCito callers.

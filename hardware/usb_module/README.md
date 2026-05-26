@@ -5,6 +5,12 @@
 Simulation-first USB device detection and driver mapping for SmartCito's device
 manager and hardware plug-in flow.
 
+## Container Image
+
+- Build file: `hardware/usb_module/Dockerfile`
+- What the image does: runs the FastAPI USB device service on port `8015` for enumerating attached devices and driver matches.
+- What ships in the image: the `hardware/` package, including the USB module, and this README at `/app/hardware/usb_module/README.md`.
+
 ## Technologies Used
 
 - Python 3.11

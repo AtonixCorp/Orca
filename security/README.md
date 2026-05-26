@@ -15,6 +15,12 @@ Primary operating documents:
 - [`hardening/secure_coding.md`](hardening/secure_coding.md)
 - [`hardening/containers.md`](hardening/containers.md)
 
+## Container Image
+
+- Build file: `security/Dockerfile`
+- What the image does: runs the FastAPI security-domain API on port `8013` with `uvicorn security.service:app`.
+- What ships in the image: the `citosmart/` runtime dependencies, the `security/` package, and this README at `/app/security/README.md`.
+
 ## Layout
 
 ```

@@ -4,6 +4,12 @@
 
 Video ingestion microservice for camera protocols and stream validation.
 
+## Container Image
+
+- Build file: `services/camera-service/Dockerfile`
+- What the image does: runs the lightweight FastAPI camera microservice on port `8010` for capability reporting and stream validation.
+- What ships in the image: `/srv/app.py`, the virtual environment, and this README at `/srv/README.md`.
+
 ## Technologies Used
 
 - Python 3.11

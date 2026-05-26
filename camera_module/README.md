@@ -2,6 +2,12 @@
 
 CCTV and drone feed processing for SmartCito.
 
+## Container Image
+
+- Build file: `camera_module/Dockerfile`
+- What the image does: runs the FastAPI camera-domain API on port `8010` for stream probing, driver inspection, and ingest validation.
+- What ships in the image: the `camera_module/` package and this README at `/app/camera_module/README.md`.
+
 ## Capabilities
 
 - RTSP / ONVIF / WebRTC ingestion via **OpenCV** and GStreamer

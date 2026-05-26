@@ -2,6 +2,12 @@
 
 Sovereign location intelligence for SmartCito: country selection, region/area-code mapping, IP geolocation, GPS validation, and multi-source fusion with confidence scoring.
 
+## Container Image
+
+- Build file: `map/Dockerfile`
+- What the image does: runs the Node.js location intelligence API on port `4010` with `node src/server.js`.
+- What ships in the image: the `map/` application source, installed production dependencies, and this README at `/app/README.md`.
+
 ## Features
 
 - ISO-3166 country dataset

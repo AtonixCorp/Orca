@@ -9,6 +9,12 @@
 
 The operator dashboard for the Urban Data Backbone.
 
+## Container Image
+
+- Build file: `webapp/Dockerfile`
+- What the image does: builds the React dashboard with Vite and serves the production bundle from nginx on port `80`.
+- What ships in the runtime image: compiled static assets, nginx config, and a copy of this README at `/usr/share/nginx/html/README.md`.
+
 ## Quickstart
 
 ```bash

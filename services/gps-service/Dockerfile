@@ -19,6 +19,7 @@ RUN python -m venv "$VIRTUAL_ENV"
 COPY services/gps-service/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY services/gps-service/app.py /srv/app.py
+COPY services/gps-service/README.md /srv/README.md
 
 FROM runtime
 COPY --from=builder /srv /srv

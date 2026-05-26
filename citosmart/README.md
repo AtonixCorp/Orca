@@ -9,6 +9,12 @@
 
 The Python service that powers the SmartCito Urban Data Backbone API.
 
+## Container Image
+
+- Build file: `citosmart/Dockerfile`
+- What the image does: runs the production FastAPI API on port `8000` with `uvicorn app.main:app`.
+- What ships in the image: the full `citosmart/` application tree and this README at `/app/README.md`.
+
 ## Quickstart
 
 ```bash

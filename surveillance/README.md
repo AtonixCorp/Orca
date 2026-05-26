@@ -4,6 +4,12 @@ The SmartCito drone and surveillance layer connects mobile drones, fixed sensors
 
 Drones and sensors are not baked into the SmartCito OS image. They run as services on Kubernetes or Docker Compose and publish normalized real-time events into the platform backbone.
 
+## Container Image
+
+- Build file: `surveillance/Dockerfile`
+- What the image does: runs the Drone Gateway API on port `8020` with `uvicorn surveillance.drone_gateway_service:app`.
+- What ships in the image: the `surveillance/` package and this README at `/app/surveillance/README.md`.
+
 ## Services
 
 | Service | Local port | Purpose | Main topics |

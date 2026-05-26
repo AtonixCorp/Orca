@@ -8,6 +8,12 @@ This module hosts connectors and streaming pipelines that move raw data from
 edge devices (IoT sensors, CCTV cameras, GPS modules, third-party APIs) into
 the SmartCito core for processing, storage, and analytics.
 
+## Container Images
+
+- `ingestion/Dockerfile`: runs the default Python ingestion job container with `python -m ingestion.spark_job`.
+- `ingestion/Dockerfile.spark`: runs the Structured Streaming container with `spark-submit` against `ingestion/streaming_job.py`.
+- Both builds copy the `ingestion/` tree, so the image includes this README at `/app/ingestion/README.md` or `/opt/smartcito/ingestion/README.md`.
+
 ## Stack
 
 - **Kafka** — durable event streaming backbone
