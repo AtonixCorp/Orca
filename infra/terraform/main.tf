@@ -1,14 +1,6 @@
 terraform {
   required_version = "1.15.4"
 
-  cloud {
-    organization = "AtonixCorp-Platform"
-
-    workspaces {
-      name = "Smartcito"
-    }
-  }
-
   required_providers {
     openstack = {
       source  = "terraform-provider-openstack/openstack"
