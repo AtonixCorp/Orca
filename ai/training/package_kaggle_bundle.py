@@ -9,7 +9,7 @@ from pathlib import Path
 AI_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = AI_ROOT.parent
 DEFAULT_OUTPUT = REPO_ROOT / "dist" / "smartcito_ai_kaggle"
-FOLDERS_TO_COPY = ("ai_models", "training", "datasets")
+FOLDERS_TO_COPY = ("ai_models", "training", "datasets", "assets")
 FILES_TO_COPY = ("LICENSE",)
 DOCS_TO_COPY = ("MODEL_CARD.md", "OPERATIONAL_FLOW.md", "KAGGLE_USAGE.md")
 EXAMPLE_FILES_TO_COPY = ("smartcito_training_demo.ipynb", "smartcito_inference_demo.ipynb")

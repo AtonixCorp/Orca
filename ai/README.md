@@ -1,8 +1,19 @@
 # SmartCito Model
 
+![SmartCito Kaggle Cover](assets/kaggle/smartcito-kaggle-cover.svg)
+
 SmartCito Model is the AI workspace for SmartCito operational intelligence. It packages enterprise-ready training, evaluation, inference, and deployment assets for city operations, critical infrastructure monitoring, sensor fusion, camera analytics, robotic workflows, and geospatial decision support.
 
 This `ai/` directory is the canonical AI bundle entry point for Kaggle and internal model operations.
+
+## Visual Assets
+
+This bundle includes Kaggle-ready visuals under `ai/assets/kaggle/`:
+
+- `smartcito-kaggle-cover.svg` for the main bundle banner
+- `smartcito-data-pipeline.svg` for ingestion and training flow diagrams
+- `smartcito-runtime-map.svg` for runtime, mapping, and operations visuals
+- `smartcito-ai-model-icon.svg` for SmartCito AI model branding and avatars
 
 ## What This Bundle Is
 
