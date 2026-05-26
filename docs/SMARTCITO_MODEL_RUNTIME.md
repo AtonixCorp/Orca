@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The SmartCito runtime provides a sovereign end-to-end path for ingestion, training, deployment, and inference.
+The SmartCito runtime provides an end-to-end path for ingestion, training, deployment, and inference.
 
 ## Components
 
@@ -45,5 +45,5 @@ Output batches are written as:
 ## Non-Negotiables
 
 - No external model weights are bundled
-- Only sovereign or synthetic data should be ingested for training
+- Only private or synthetic data should be ingested for training
 - Sanitized export must be used for any external sharing workflow

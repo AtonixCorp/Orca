@@ -6,11 +6,10 @@ import shutil
 from pathlib import Path
 
 
-AI_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = AI_ROOT.parent
-DEFAULT_OUTPUT = REPO_ROOT / "dist" / "smartcito_ai_kaggle"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUTPUT = ROOT / "dist" / "smartcito_ai_kaggle"
 FOLDERS_TO_COPY = ("ai_models", "training", "datasets")
-FILES_TO_COPY = ("LICENSE",)
+FILES_TO_COPY = ("README.md", "LICENSE")
 DOCS_TO_COPY = ("MODEL_CARD.md", "OPERATIONAL_FLOW.md", "KAGGLE_USAGE.md")
 EXAMPLE_FILES_TO_COPY = ("smartcito_training_demo.ipynb", "smartcito_inference_demo.ipynb")
 PROHIBITED_WEIGHT_PATTERNS = (
@@ -67,22 +66,20 @@ def package_bundle(output_dir: str | Path) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
 
     for folder_name in FOLDERS_TO_COPY:
-        _copy_tree(AI_ROOT / folder_name, destination / folder_name)
+        _copy_tree(ROOT / folder_name, destination / folder_name)
 
     examples_destination = destination / "examples"
     examples_destination.mkdir(parents=True, exist_ok=True)
     for file_name in EXAMPLE_FILES_TO_COPY:
-        _copy_file(AI_ROOT / "examples" / file_name, examples_destination / file_name)
+        _copy_file(ROOT / "examples" / file_name, examples_destination / file_name)
 
     docs_destination = destination / "docs"
     docs_destination.mkdir(parents=True, exist_ok=True)
     for doc_name in DOCS_TO_COPY:
-        _copy_file(REPO_ROOT / "docs" / doc_name, docs_destination / doc_name)
-
-    _copy_file(AI_ROOT / "README.md", destination / "README.md")
+        _copy_file(ROOT / "docs" / doc_name, docs_destination / doc_name)
 
     for file_name in FILES_TO_COPY:
-        _copy_file(REPO_ROOT / file_name, destination / file_name)
+        _copy_file(ROOT / file_name, destination / file_name)
 
     _assert_no_prohibited_weights(destination)
 
@@ -94,9 +91,9 @@ def package_bundle(output_dir: str | Path) -> Path:
         "notes": [
             "Upload this folder to Kaggle as a Dataset or zip it for notebook input.",
             "This bundle does not include LLaMA-3 weights.",
-            "It only ships SmartCito code, LoRA/QLoRA adapters, and synthetic or private datasets.",
+            "It only ships SmartCito code, LoRA/QLoRA adapters, and synthetic or sovereign datasets.",
             "Users must obtain any compatible base model from official provider sources.",
-            "Generated adapters belong in ai/output/smartcito-lora after training."
+            "Generated adapters belong in output/smartcito-lora after training."
         ]
     }
     (destination / "kaggle_bundle_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -108,7 +105,7 @@ def package_bundle(output_dir: str | Path) -> Path:
         "## What To Upload\n\n"
         f"Upload the entire folder at `{destination}`.\n\n"
         "## Weight Policy\n\n"
-        "This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA/QLoRA adapters, and synthetic or private datasets. Users must obtain any compatible base model from official provider sources.\n\n"
+        "This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA/QLoRA adapters, and synthetic or sovereign datasets. Users must obtain any compatible base model from official provider sources.\n\n"
         "## What Not To Upload\n\n"
         "- LLaMA-3 or other foundation-model weights\n"
         "- API keys or local secrets\n"

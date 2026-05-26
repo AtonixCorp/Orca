@@ -1,16 +1,176 @@
-# AI Workspace
+# SmartCito Model
 
-`ai/` is the consolidated home for SmartCito AI code, data, runtime assets, and generated model artifacts.
+SmartCito Model is the AI workspace for SmartCito operational intelligence. It packages enterprise-ready training, evaluation, inference, and deployment assets for city operations, critical infrastructure monitoring, sensor fusion, camera analytics, robotic workflows, and geospatial decision support.
 
-## Layout
+This `ai/` directory is the canonical AI bundle entry point for Kaggle and internal model operations.
 
-- `ai/ai_models/` — inference service, model utilities, and runtime dependencies
-- `ai/training/` — training, evaluation, dataset preparation, Kaggle packaging, and publishing
-- `ai/datasets/` — synthetic and prepared datasets for SmartCito AI workflows
-- `ai/examples/` — notebooks and demos for training and inference
-- `ai/smartcito_runtime/` — sovereign SmartCito model runtime package
-- `ai/smartcito_datasets/` — generated DataStream training batches
-- `ai/models/` — versioned deployed SmartCito model artifacts
-- `ai/output/` — adapter and evaluation outputs
+## What This Bundle Is
 
-Use these `ai/` paths directly; the duplicate top-level AI folders have been removed.
+SmartCito Model is designed for controlled, auditable AI workflows:
+
+- LoRA and QLoRA fine-tuning for SmartCito task adaptation
+- adapter-only output sharing for compliant collaboration
+- runtime support for versioned local deployment
+- inference services for operational reasoning and alert handling
+- training data preparation for structured SmartCito task records
+- Kaggle-ready examples for reproducible experimentation
+
+This bundle does not include LLaMA-3 weights or any other foundation-model weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain any compatible base model from official provider sources.
+
+## Enterprise Scope
+
+SmartCito Model is intended for organizations that need:
+
+- auditable AI workflows with clear artifact boundaries
+- controlled adapter training instead of raw foundation-model redistribution
+- domain-specific reasoning for drones, sensors, cameras, maps, and operator workflows
+- versioned deployment artifacts for repeatable runtime promotion
+- separation between public examples and private operational data
+
+## Bundle Layout
+
+- `ai/ai_models/` — inference APIs, model utilities, and runtime dependencies
+- `ai/ingestion/` — external data ingestion for space weather, satellite, GPS, and map sources
+- `ai/training/` — dataset preparation, fine-tuning, evaluation, Kaggle packaging, and publishing
+- `ai/datasets/` — sample and prepared datasets for SmartCito AI workflows
+- `ai/examples/` — Kaggle-ready notebook and demo assets
+- `ai/smartcito_runtime/` — runtime and model loading logic
+- `ai/smartcito_datasets/` — generated ingestion batches for training flows
+- `ai/models/` — versioned SmartCito runtime model artifacts
+- `ai/output/` — LoRA adapter outputs and evaluation reports
+
+## Core Workflows
+
+### 1. Ingest External Data
+
+Pull external operational context into SmartCito training batches stored under `ai/datasets/`:
+
+```bash
+python ai/ingestion/space_weather_ingestor.py
+python ai/ingestion/satellite_ingestor.py
+python ai/ingestion/gps_ingestor.py --input-file path/to/gps_logs.json
+python ai/ingestion/map_ingestor.py --bbox "-26.25,27.98,-26.15,28.08"
+```
+
+### 2. Prepare Training Data
+
+Convert SmartCito task records or normalized source data into supervised training examples:
+
+```bash
+python ai/training/prepare_dataset.py \
+	--input ai/datasets/sample_training_data.json \
+	--output ai/datasets/prepared_smartcito_training_data.jsonl
+```
+
+### 3. Train the Runtime Model
+
+Train the versioned SmartCito runtime model directly from JSON records in `ai/datasets/`:
+
+```bash
+python ai/training/train.py --dataset-dir ai/datasets --models-dir ai/models
+```
+
+### 4. Fine-Tune Adapters
+
+Run LoRA or QLoRA against a user-supplied compatible base model:
+
+```bash
+python ai/training/lora_training.py \
+	--dataset ai/datasets/sample_training_data.json \
+	--base-model your-foundation-model-id \
+	--output-dir ai/output/smartcito-lora
+```
+
+```bash
+python ai/training/qlora_training.py \
+	--dataset ai/datasets/sample_training_data.json \
+	--base-model your-foundation-model-id \
+	--output-dir ai/output/smartcito-lora
+```
+
+### 5. Evaluate Outputs
+
+Score trained adapters and generate review-ready reports:
+
+```bash
+python ai/training/evaluate_adapters.py \
+	--dataset ai/datasets/sample_evaluation_data.json \
+	--base-model your-foundation-model-id \
+	--adapter-path ai/output/smartcito-lora \
+	--output ai/output/smartcito-lora/evaluation_summary.json \
+	--markdown-report ai/output/smartcito-lora/evaluation_report.md
+```
+
+### 6. Run Inference
+
+Use the FastAPI inference service for SmartCito task execution:
+
+```bash
+uvicorn ai.ai_models.inference:app --host 0.0.0.0 --port 8012
+```
+
+The inference layer supports SmartCito decision surfaces for mission planning, robot navigation, camera analysis, sensor fusion, threat assessment, geographic reasoning, and infrastructure operations.
+
+### 7. Package for Kaggle
+
+Create a clean Kaggle-ready bundle:
+
+```bash
+python ai/training/package_kaggle_bundle.py
+```
+
+Publish metadata for Kaggle dataset distribution:
+
+```bash
+python ai/training/publish_kaggle_dataset.py --bundle-dir dist/smartcito_ai_kaggle
+```
+
+## Runtime
+
+SmartCito Model also includes a local runtime for organizations that need versioned, self-managed deployment without bundling foundation-model weights.
+
+- generated training batches land in `ai/smartcito_datasets/`
+- versioned runtime models are stored in `ai/models/smartcito_model_vN/`
+- active deployment state is tracked in `ai/models/active_model.json`
+- runtime orchestration is exposed through the root `smartcito` CLI
+
+Example commands:
+
+```bash
+./smartcito ingest --config ingestion/config/datastream_sources.json
+./smartcito train --batch-dir ai/smartcito_datasets
+./smartcito deploy --version smartcito_model_v1
+./smartcito dataset export --batch-dir ai/smartcito_datasets --output-path exports/smartcito_external.json
+```
+
+## Kaggle Assets
+
+This bundle includes the primary public AI deliverables:
+
+- `ai/examples/SmartCito_Training_Demo.ipynb`
+- `ai/examples/smartcito_inference_demo.ipynb`
+- `ai/examples/inference_demo.py`
+
+These assets are intended to demonstrate the SmartCito Model workflow without exposing regulated data, secrets, or foundation-model weights.
+
+## Compliance Boundary
+
+SmartCito Model should be shared with the following controls:
+
+- publish adapters, not base weights
+- publish synthetic or sanitized private data only
+- exclude secrets, tokens, and private credentials
+- exclude proprietary raw logs unless explicitly approved for internal use
+- preserve evaluation outputs and artifact lineage for review
+
+## Recommended Entry Points
+
+- Dataset schema: `ai/training/dataset_format.md`
+- Model card: `docs/MODEL_CARD.md`
+- Operational flow: `docs/OPERATIONAL_FLOW.md`
+- Kaggle workflow: `docs/KAGGLE_USAGE.md`
+- Runtime flow: `docs/SMARTCITO_MODEL_RUNTIME.md`
+
+## Operational Standard
+
+For enterprise use, treat `ai/` as the single source of truth for SmartCito AI assets. New training scripts, evaluation logic, datasets, notebooks, runtime code, and adapter artifacts should live under this directory so packaging, validation, and distribution remain auditable and repeatable.

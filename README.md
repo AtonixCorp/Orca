@@ -22,13 +22,13 @@
 
 # SmartCito
 
-**Sovereign edge-intelligence platform for cities and infrastructure.**
+**Secure edge-intelligence platform for cities and infrastructure.**
 
 SmartCito unifies IoT, GPS, cameras, 2D/3D maps, AI, cryptography, and secure edge compute into a single auditable operations dashboard.
 
 The repository now also includes a Kaggle-ready fine-tuning pipeline for the SmartCito Model, with LoRA and QLoRA workflows for SmartCito operational intelligence.
 
-This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or sovereign datasets. Users must obtain any compatible base model from official provider sources.
+This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain any compatible base model from official provider sources.
 
 ---
 
@@ -51,7 +51,7 @@ Every hop is authenticated, encrypted, and logged to the ATP ledger.
 
 ## Location Intelligence (Map Module)
 
-The **Map module** (`/map`) powers SmartCito's sovereign location intelligence: country selection, region/area-code mapping, IP geolocation, GPS validation, and multi-source fusion with confidence scoring.
+The **Map module** (`/map`) powers SmartCito's location intelligence: country selection, region/area-code mapping, IP geolocation, GPS validation, and multi-source fusion with confidence scoring.
 
 ![Location Fusion Engine](docs/diagrams/location-fusion.svg)
 
@@ -177,7 +177,7 @@ AI-specific folders are consolidated under `ai/`. Use the `ai/` tree directly fo
 
 The SmartCito Model pipeline supports LoRA and QLoRA fine-tuning workflows and exports adapter-only artifacts to `ai/output/smartcito-lora/`.
 
-The repository also now includes a sovereign SmartCito runtime pipeline for ingestion, versioned training, deployment, and inference without bundling third-party foundation-model weights.
+The repository also now includes a SmartCito runtime pipeline for ingestion, versioned training, deployment, and inference without bundling third-party foundation-model weights.
 
 - Dataset schema: [ai/training/dataset_format.md](ai/training/dataset_format.md)
 - Training scripts: [ai/training/lora_training.py](ai/training/lora_training.py) and [ai/training/qlora_training.py](ai/training/qlora_training.py)
@@ -194,9 +194,9 @@ The repository also now includes a sovereign SmartCito runtime pipeline for inge
 - Kaggle workflow: [docs/KAGGLE_USAGE.md](docs/KAGGLE_USAGE.md)
 - Runtime documentation: [docs/SMARTCITO_MODEL_RUNTIME.md](docs/SMARTCITO_MODEL_RUNTIME.md)
 
-### Sovereign Runtime
+### Runtime
 
-- Ingestion/DataStream batches sovereign events into `ai/smartcito_datasets/batch_YYYYMMDD_HHMMSS.json`
+- Ingestion/DataStream batches operational events into `ai/smartcito_datasets/batch_YYYYMMDD_HHMMSS.json`
 - Versioned model artifacts are stored under `ai/models/smartcito_model_vN/`
 - The active deployed model is tracked via `ai/models/active_model.json`
 - FastAPI inference exposes SmartCito task endpoints under `/smartcito/*`

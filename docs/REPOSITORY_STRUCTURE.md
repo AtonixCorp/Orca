@@ -105,9 +105,9 @@ notebooks, runtime code, and model artifacts.
 
 - `ai/ai_models/` for inference services and model packaging.
 - `ai/training/` for fine-tuning, evaluation, and Kaggle packaging scripts.
-- `ai/datasets/` for synthetic and sovereign AI datasets.
+- `ai/datasets/` for synthetic and private AI datasets.
 - `ai/examples/` for notebooks and demo assets.
-- `ai/smartcito_runtime/` for the sovereign runtime model code.
+- `ai/smartcito_runtime/` for the runtime model code.
 - `ai/smartcito_datasets/` for generated ingestion batches.
 - `ai/models/` and `ai/output/` for versioned artifacts and adapter outputs.
 

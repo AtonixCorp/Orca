@@ -4,11 +4,11 @@
 
 - SmartCito training scripts
 - SmartCito inference service code
-- Synthetic or sovereign sample datasets
+- Synthetic or private sample datasets
 - Kaggle notebooks for training and inference
 - Model and operational documentation
 
-This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or sovereign datasets. Users must obtain LLaMA-3 or any other compatible base model from official provider sources.
+This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain LLaMA-3 or any other compatible base model from official provider sources.
 
 ## Recommended Bundle Layout
 

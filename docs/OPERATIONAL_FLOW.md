@@ -6,14 +6,14 @@ SmartCito coordinates edge intelligence across drones, robots, cameras, IoT sens
 
 1. Edge devices emit telemetry, alerts, imagery metadata, and mission context.
 2. SmartCito normalizes those signals into operational records and event streams.
-3. The training pipeline converts sovereign or synthetic data into `instruction`, `input`, `output`, and `metadata` records.
+3. The training pipeline converts private or synthetic data into `instruction`, `input`, `output`, and `metadata` records.
 4. LoRA or QLoRA fine-tuning produces adapter-only artifacts in `ai/output/smartcito-lora/`.
 5. Evaluation checks domain coverage across drone missions, robot navigation, camera analytics, sensor fusion, threat reasoning, and geographic planning.
 6. Inference runs through `ai/ai_models/inference.py` and `ai/ai_models/llama_stack.py`, using a user-supplied compatible base model plus SmartCito adapters.
 
 ## Bundle Boundary
 
-This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or sovereign datasets. Users must obtain any compatible base model from official provider sources.
+This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain any compatible base model from official provider sources.
 
 ## Primary Components
 

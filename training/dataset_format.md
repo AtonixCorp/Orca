@@ -43,14 +43,14 @@ SmartCito fine-tuning data uses four fields per record:
 ## Preparation Flow
 
 1. Add or collect JSON/JSONL records using the schema above.
-2. Run `python ai/training/prepare_dataset.py --input <raw-data> --output ai/datasets/prepared_smartcito_training_data.jsonl` when your source data already follows the SmartCito schema.
+2. Run `python training/prepare_dataset.py --input <raw-data> --output datasets/prepared_smartcito_training_data.jsonl` when your source data already follows the SmartCito schema.
 3. For edge-device logs, pass a source type to normalize them into SmartCito training records:
 
 ```bash
-python ai/training/prepare_dataset.py \
-  --input ai/datasets/raw_drone_logs.json \
+python training/prepare_dataset.py \
+  --input datasets/raw_drone_logs.json \
   --source-type drone \
-  --output ai/datasets/prepared_smartcito_training_data.jsonl
+  --output datasets/prepared_smartcito_training_data.jsonl
 ```
 
 Supported source types:
@@ -63,7 +63,7 @@ Supported source types:
 - `threat` for incident and threat-reasoning logs
 - `operator` for operator actions, command decisions, and follow-up workflows
 
-The normalizer exposes source-specific hooks in [prepare_dataset.py](prepare_dataset.py):
+The normalizer exposes source-specific hooks in [training/prepare_dataset.py](training/prepare_dataset.py):
 
 - `build_record_from_drone_log`
 - `build_record_from_robot_log`
@@ -73,6 +73,6 @@ The normalizer exposes source-specific hooks in [prepare_dataset.py](prepare_dat
 - `build_record_from_threat_log`
 - `build_record_from_operator_log`
 
-Contributors can extend these helpers or add their own source type to convert private operational data into SmartCito instruction records.
-4. Train with `python ai/training/lora_training.py --base-model <provider-model-id>` or `python ai/training/qlora_training.py --base-model <provider-model-id>`.
-5. Share only the adapter directory from `ai/output/smartcito-lora/`.
+Contributors can extend these helpers or add their own source type to convert sovereign operational data into SmartCito instruction records.
+4. Train with `python training/lora_training.py --base-model <provider-model-id>` or `python training/qlora_training.py --base-model <provider-model-id>`.
+5. Share only the adapter directory from `output/smartcito-lora/`.

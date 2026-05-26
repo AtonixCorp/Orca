@@ -145,7 +145,7 @@ If the downstream backend requires a bearer token, also set:
 export PASSTHROUGH_API_KEY=your-token
 ```
 
-This Kaggle bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain any compatible base model from official provider sources.
+This Kaggle bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or sovereign datasets. Users must obtain any compatible base model from official provider sources.
 
 Once your Llama Stack server is running and exposes an OpenAI-compatible API,
 the SmartCito AI service provides:

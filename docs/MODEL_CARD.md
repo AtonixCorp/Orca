@@ -31,7 +31,7 @@ SmartCito adapters are fine-tuned on structured instruction data using the schem
 
 The repository ships only sample and prepared contributor data. Base model weights are not included.
 
-This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or sovereign datasets. Users must obtain LLaMA-3 or any other compatible base model from official provider sources.
+This bundle does not include LLaMA-3 weights. It only ships SmartCito code, LoRA or QLoRA adapters, and synthetic or private datasets. Users must obtain LLaMA-3 or any other compatible base model from official provider sources.
 
 ## Limitations
 

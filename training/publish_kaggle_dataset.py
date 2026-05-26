@@ -7,9 +7,8 @@ import sys
 from pathlib import Path
 
 
-AI_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = AI_ROOT.parent
-DEFAULT_BUNDLE_DIR = REPO_ROOT / "dist" / "smartcito_ai_kaggle"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BUNDLE_DIR = ROOT / "dist" / "smartcito_ai_kaggle"
 DEFAULT_SLUG = "smartcito-ai-kaggle-bundle"
 DEFAULT_TITLE = "SmartCito AI Kaggle Bundle"
 DEFAULT_LICENSE = "Apache-2.0"
@@ -45,7 +44,7 @@ def build_metadata(args: argparse.Namespace) -> dict[str, object]:
         "subtitle": "Sovereign SmartCito training, inference, and synthetic data bundle",
         "description": (
             "SmartCito bundle for LoRA/QLoRA fine-tuning, offline evaluation, and Kaggle-based collaboration. "
-            "Ships SmartCito code, synthetic or private datasets, notebooks, and docs only. "
+            "Ships SmartCito code, synthetic or sovereign datasets, notebooks, and docs only. "
             "No LLaMA-3 or other foundation-model weights are included."
         ),
         "isPrivate": bool(args.private),
@@ -62,7 +61,7 @@ def ensure_bundle(bundle_dir: Path) -> None:
     if bundle_dir.exists():
         return
     raise SystemExit(
-        f"Bundle directory does not exist: {bundle_dir}. Run python ai/training/package_kaggle_bundle.py first."
+        f"Bundle directory does not exist: {bundle_dir}. Run python training/package_kaggle_bundle.py first."
     )
 
 
@@ -70,7 +69,7 @@ def ensure_kaggle_cli() -> None:
     try:
         subprocess.run(
             [sys.executable, "-m", "kaggle.cli", "--version"],
-            cwd=REPO_ROOT,
+            cwd=ROOT,
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -92,7 +91,7 @@ def ensure_kaggle_auth() -> None:
     try:
         subprocess.run(
             [sys.executable, "-m", "kaggle.cli", "competitions", "list"],
-            cwd=REPO_ROOT,
+            cwd=ROOT,
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -134,7 +133,7 @@ def publish_dataset(bundle_dir: Path, args: argparse.Namespace) -> None:
             args.dir_mode,
         ]
 
-    subprocess.run(command, cwd=REPO_ROOT, check=True)
+    subprocess.run(command, cwd=ROOT, check=True)
 
 
 def main() -> int:
