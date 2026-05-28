@@ -15,7 +15,10 @@ from functools import lru_cache
 from typing import Any
 from urllib import parse, request
 
-import folium
+try:
+    import folium
+except ModuleNotFoundError:  # pragma: no cover - optional map rendering dependency.
+    folium = None
 import geopandas as gpd
 import networkx as nx
 from pyproj import Transformer
@@ -656,6 +659,9 @@ def render_city_map(
     threat_overlays: list[MapOverlay] | None = None,
     geofence_overlays_list: list[MapOverlay] | None = None,
 ) -> dict[str, Any]:
+    if folium is None:
+        raise RuntimeError("folium is required for map rendering")
+
     center_lat, center_lon = _city_reference_center()
     city_map = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles="OpenStreetMap")
     persisted_dataset = fetch_persisted_geographic_dataset() or {}
