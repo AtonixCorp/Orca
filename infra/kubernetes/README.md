@@ -38,6 +38,42 @@ kubectl apply -f infra/kubernetes/visualization-gateway.yaml
 kubectl apply -f infra/kubernetes/
 ```
 
+## Local Kubernetes (kind)
+
+For local development, use the kind bootstrap script instead of the OpenStack
+path above. The local overlay swaps cloud-only storage and load balancers for
+single-node development equivalents and mounts the shared repo directories that
+the current `atonixdev/*:1.0.0` images still expect at runtime.
+
+The local database path uses the CloudNativePG operator and applies the official
+release `1.29` manifest with:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/cloudnative-pg/artifacts/release-1.29/manifests/operator-manifest.yaml | kubectl apply --server-side -f -
+```
+
+```bash
+bash infra/kubernetes/init-local-kind.sh
+```
+
+This creates or reuses a local `kind` cluster, mounts the repo into the node at
+`/workspace/smartcito`, then renders `infra/kubernetes/local` with
+`kubectl kustomize --load-restrictor LoadRestrictionsNone` before applying it.
+If the SmartCito images already exist in the local Docker daemon, the script
+loads them into `kind` first to avoid waiting on registry pulls.
+
+The visualization gateway is exposed locally at `http://127.0.0.1:18088` by
+default. Override it with `KIND_GATEWAY_PORT` if needed.
+
+## Docker Environment
+
+To prepare the Docker environment, pull the declared images, start the compose
+stack, and verify the core SmartCito services, run:
+
+```bash
+bash scripts/start-smartcito-environment.sh
+```
+
 Use the OpenStack cloud controller manager and Cinder CSI driver so
 `LoadBalancer` services and `cinder-csi` persistent volumes are provisioned by
 the underlying OpenStack cluster.

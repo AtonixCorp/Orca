@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    openstack = {
+      source = "terraform-provider-openstack/openstack"
+    }
+  }
+}
+
 resource "openstack_networking_network_v2" "network" {
   name = var.network_name
 }

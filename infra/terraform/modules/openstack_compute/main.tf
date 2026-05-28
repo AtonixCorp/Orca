@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    openstack = {
+      source = "terraform-provider-openstack/openstack"
+    }
+  }
+}
+
 resource "openstack_compute_instance_v2" "instance" {
   count       = var.instance_count
   name        = "${var.name_prefix}-${count.index + 1}"
