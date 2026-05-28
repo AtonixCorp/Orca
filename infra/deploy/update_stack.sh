@@ -12,7 +12,7 @@ runtime_dir="infra/deploy/runtime"
 api_upstream_runtime_file="$runtime_dir/api-upstream.conf"
 active_api_slot_file="$runtime_dir/active_api_slot"
 keep_previous_api_slot="${BLUE_GREEN_KEEP_OLD_SLOT:-false}"
-legacy_api_container_name="orca-citosmart"
+legacy_api_container_name="orca-orcaapi"
 
 cd "$DEPLOY_PATH"
 
@@ -44,7 +44,7 @@ POSTGRES_USER=${DB_USER:-orca}
 POSTGRES_PASSWORD=${DB_PASSWORD:-change-me}
 POSTGRES_DB=${DB_NAME:-orca}
 KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BROKER_URL:-kafka:9092}
-CITOSMART_IMAGE=${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG}
+ORCAAPI_IMAGE=${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG}
 WEBAPP_IMAGE=${IMAGE_REGISTRY}/webapp:${IMAGE_TAG}
 CAMERA_IMAGE=${IMAGE_REGISTRY}/camera-service:${IMAGE_TAG}
 GPS_IMAGE=${IMAGE_REGISTRY}/gps-service:${IMAGE_TAG}
@@ -70,7 +70,7 @@ rolling_services=(
 	hardware-agent
 	webapp
 )
-rolling_partition_services=(citosmart-blue "${rolling_services[@]}")
+rolling_partition_services=(orcaapi-blue "${rolling_services[@]}")
 
 ensure_blue_green_runtime() {
 	mkdir -p "$runtime_dir"
@@ -86,7 +86,7 @@ ensure_blue_green_runtime() {
 
 api_slot_service() {
 	local slot="$1"
-	echo "citosmart-$slot"
+	echo "orcaapi-$slot"
 }
 
 current_active_api_slot() {
@@ -238,7 +238,7 @@ case "$deploy_strategy" in
 
 		bootstrap_from_legacy=false
 		active_slot="$(current_active_api_slot)"
-		if ! service_running citosmart-blue && ! service_running citosmart-green && legacy_api_container_exists; then
+		if ! service_running orcaapi-blue && ! service_running orcaapi-green && legacy_api_container_exists; then
 			bootstrap_from_legacy=true
 			target_slot="blue"
 			active_slot="blue"
@@ -279,8 +279,8 @@ case "$deploy_strategy" in
 			wait_for_service "$service_name"
 		done
 
-		bash infra/deploy/run_migrations.sh "$compose_file" citosmart-blue
-		roll_service citosmart-blue
+		bash infra/deploy/run_migrations.sh "$compose_file" orcaapi-blue
+		roll_service orcaapi-blue
 		switch_api_traffic blue "$(current_active_api_slot)"
 
 		for service_name in "${rolling_services[@]}"; do
@@ -288,7 +288,7 @@ case "$deploy_strategy" in
 		done
 		;;
 	full-stack)
-		bash infra/deploy/run_migrations.sh "$compose_file" citosmart-blue
+		bash infra/deploy/run_migrations.sh "$compose_file" orcaapi-blue
 		"${compose[@]}" up -d --remove-orphans --wait
 		;;
 	*)

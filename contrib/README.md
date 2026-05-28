@@ -24,7 +24,7 @@ contrib/
 1. **One folder per contribution.** Name it clearly (kebab-case).
 2. **Every folder ships a `README.md`** explaining purpose, status, owner,
    and how to run/test it.
-3. **No core dependencies on contrib.** Code in `citosmart/` and `webapp/`
+3. **No core dependencies on contrib.** Code in `orcaapi/` and `webapp/`
    must never import from `contrib/`.
 4. **Tests are required**, even for experiments — add them under
    `contrib/<your-feature>/tests/` or [`../tests/`](../tests/).

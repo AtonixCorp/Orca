@@ -66,9 +66,9 @@ The endpoint returns:
 
 | Surface | File |
 |---|---|
-| Scene schemas | [../../citosmart/app/schemas/control_plane.py](../../citosmart/app/schemas/control_plane.py) |
-| Scene aggregation | [../../citosmart/app/services/control_plane.py](../../citosmart/app/services/control_plane.py) |
-| Scene endpoint | [../../citosmart/app/api/v1/endpoints/control_plane.py](../../citosmart/app/api/v1/endpoints/control_plane.py) |
+| Scene schemas | [../../orcaapi/app/schemas/control_plane.py](../../orcaapi/app/schemas/control_plane.py) |
+| Scene aggregation | [../../orcaapi/app/services/control_plane.py](../../orcaapi/app/services/control_plane.py) |
+| Scene endpoint | [../../orcaapi/app/api/v1/endpoints/control_plane.py](../../orcaapi/app/api/v1/endpoints/control_plane.py) |
 | Frontend scene client | [../../webapp/src/api/scene.ts](../../webapp/src/api/scene.ts) |
 | Three.js component | [../../webapp/src/components/ThreeDashboardPanel.tsx](../../webapp/src/components/ThreeDashboardPanel.tsx) |
 | Dashboard wiring | [../../webapp/src/pages/Dashboard.tsx](../../webapp/src/pages/Dashboard.tsx) |
@@ -76,7 +76,7 @@ The endpoint returns:
 ## Validation
 
 ```bash
-cd citosmart
+cd orcaapi
 .venv/bin/pytest tests/test_map_integration.py -q
 
 cd ../webapp

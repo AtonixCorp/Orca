@@ -16,9 +16,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 RUN python -m venv "$VIRTUAL_ENV"
-COPY citosmart/requirements.txt /tmp/runtime-requirements.txt
+COPY orcaapi/requirements.txt /tmp/runtime-requirements.txt
 RUN pip install --no-cache-dir -r /tmp/runtime-requirements.txt
-COPY citosmart /app
+COPY orcaapi /app
 COPY security /app/security
 
 FROM runtime

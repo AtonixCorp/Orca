@@ -27,4 +27,4 @@ Contracts and reference flows for registering hardware cameras with Orca.
 ## Artifacts
 
 - registration schema: [`schemas/camera_registration.schema.json`](schemas/camera_registration.schema.json)
-- implementation targets: [`../../citosmart/`](../../citosmart/) and [`../../webapp/`](../../webapp/)
+- implementation targets: [`../../orcaapi/`](../../orcaapi/) and [`../../webapp/`](../../webapp/)

@@ -56,10 +56,10 @@ flowchart LR
 - [../../hardware/body_cameras](../../hardware/body_cameras)
 - [../../hardware/micro_cameras](../../hardware/micro_cameras)
 - [../../hardware/gps_modules](../../hardware/gps_modules)
-- [../../citosmart/app/api/v1/endpoints/cameras.py](../../citosmart/app/api/v1/endpoints/cameras.py)
+- [../../orcaapi/app/api/v1/endpoints/cameras.py](../../orcaapi/app/api/v1/endpoints/cameras.py)
 
 ## Container Run Instructions
 
 ```bash
-docker compose up --build camera-service gps-service citosmart
+docker compose up --build camera-service gps-service orcaapi
 ```

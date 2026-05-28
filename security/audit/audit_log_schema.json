@@ -29,7 +29,7 @@
     },
     "service": {
       "type": "string",
-      "description": "Emitting service, e.g. 'citosmart-api', 'camera-ingestor'."
+      "description": "Emitting service, e.g. 'orcaapi-api', 'camera-ingestor'."
     },
     "env": {
       "type": "string",

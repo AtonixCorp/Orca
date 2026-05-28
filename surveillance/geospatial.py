@@ -113,7 +113,7 @@ def _build_geodataframe(records: list[dict[str, Any]]) -> gpd.GeoDataFrame:
 
 
 def _backend_geospatial_url() -> str:
-    return os.getenv("CITOSMART_GEOSPATIAL_URL", "http://citosmart:8000/api/v1/geospatial/dataset")
+    return os.getenv("ORCAAPI_GEOSPATIAL_URL", "http://orcaapi:8000/api/v1/geospatial/dataset")
 
 
 def fetch_persisted_geographic_dataset() -> dict[str, Any] | None:

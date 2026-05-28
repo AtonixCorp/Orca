@@ -91,7 +91,7 @@ their local proxy routes in one stack.
 ### Local Orca API Development
 
 ```bash
-cd citosmart
+cd orcaapi
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
@@ -154,7 +154,7 @@ Kafka topics, Kubernetes deployment, Docker Compose usage, and validation steps.
 | Folder | Purpose |
 | ------ | ------- |
 | `ai/` | Consolidated home for AI inference, training, datasets, notebooks, runtime code, and model artifacts |
-| `citosmart/` | Primary FastAPI application, schemas, services, and migrations |
+| `orcaapi/` | Primary FastAPI application, schemas, services, and migrations |
 | `ingestion/` | External data ingestion pipelines and connectors |
 | `services/` | Deployable microservice workspace for separately scoped services |
 | `surveillance/` | Drone gateway, sensor gateway, drone camera ingestion, mapping, and threat services |
@@ -168,7 +168,7 @@ Kafka topics, Kubernetes deployment, Docker Compose usage, and validation steps.
 | `tests/` | Cross-module integration and security tests |
 | `docs/` | Architecture, diagrams, runbooks, and reference docs |
 
-Current backend rule: `citosmart/` is the backend API application.
+Current backend rule: `orcaapi/` is the backend API application.
 Use `services/` for separately deployable capabilities.
 
 AI-specific folders are consolidated under `ai/`. Use the `ai/` tree directly for model, dataset, training, runtime, and artifact workflows.

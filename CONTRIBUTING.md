@@ -54,10 +54,10 @@ Look for issues labeled `good first issue` and `help wanted`.
 
 ## Development Environment
 
-### Citosmart (Python / FastAPI)
+### Orcaapi (Python / FastAPI)
 
 ```bash
-cd citosmart
+cd orcaapi
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -179,7 +179,7 @@ Public APIs and complex functions require docstrings / JSDoc.
 
 ## Testing
 
-- Citosmart uses **pytest** with `pytest-asyncio`.
+- Orcaapi uses **pytest** with `pytest-asyncio`.
 - Webapp uses **Vitest** and **React Testing Library**.
 - New features must ship with tests.
 - Bug fixes must include a regression test.

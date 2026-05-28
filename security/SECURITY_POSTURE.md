@@ -128,7 +128,7 @@ data-encryption keys and annually for master keys.
 | [`security/hardening/`](hardening/) | Secure coding + container hardening       |
 | [`tests/security/`](../tests/security/) | Pentest, fuzzing, security validation  |
 | [`docs/security.md`](../docs/security.md) | Contributor checklist                |
-| [`citosmart/app/core/security.py`](../citosmart/app/core/security.py) | JWT + RBAC primitives |
+| [`orcaapi/app/core/security.py`](../orcaapi/app/core/security.py) | JWT + RBAC primitives |
 | [`camera_module/`](../camera_module/) | Secure video ingestion with TLS         |
 | [`gps_module/`](../gps_module/)   | GPS integrity checks + encryption           |
 

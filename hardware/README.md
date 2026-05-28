@@ -2,7 +2,7 @@
 
 This folder captures the reference hardware footprint for Orca pilot and
 production deployments. It complements the software implementation in
-[`../citosmart/`](../citosmart/) and [`../webapp/`](../webapp/) and the local
+[`../orcaapi/`](../orcaapi/) and [`../webapp/`](../webapp/) and the local
 Docker stack in [`../docker-compose.yml`](../docker-compose.yml).
 
 ## Container Image

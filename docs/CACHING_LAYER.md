@@ -39,13 +39,13 @@ No cache entry is configured with infinite TTL.
 
 ### Backend / API
 
-- [control_plane.py](/home/atonixdev/orca/citosmart/app/services/control_plane.py): caches dashboard overview, map overview, and scene overview.
-- [sensors.py](/home/atonixdev/orca/citosmart/app/api/v1/endpoints/sensors.py): caches recent sensor responses by requested limit.
-- [auth.py](/home/atonixdev/orca/citosmart/app/api/v1/endpoints/auth.py): caches short-lived session token reuse and caller profile responses.
+- [control_plane.py](/home/atonixdev/orca/orcaapi/app/services/control_plane.py): caches dashboard overview, map overview, and scene overview.
+- [sensors.py](/home/atonixdev/orca/orcaapi/app/api/v1/endpoints/sensors.py): caches recent sensor responses by requested limit.
+- [auth.py](/home/atonixdev/orca/orcaapi/app/api/v1/endpoints/auth.py): caches short-lived session token reuse and caller profile responses.
 
 ### AI / ML
 
-- [ai_client.py](/home/atonixdev/orca/citosmart/app/services/ai_client.py): caches anomaly-scoring results by hashed feature vector.
+- [ai_client.py](/home/atonixdev/orca/orcaapi/app/services/ai_client.py): caches anomaly-scoring results by hashed feature vector.
 
 ### Data engineering / streaming
 

@@ -3,9 +3,9 @@
  * File: webapp/src/api/client.ts
  * Purpose:
  *   Thin axios wrapper that:
- *     - Points at the FastAPI citosmart (proxied in dev).
+ *     - Points at the FastAPI orcaapi (proxied in dev).
  *     - Attaches the JWT from localStorage when present.
- *     - Surfaces citosmart errors in a normalized shape.
+ *     - Surfaces orcaapi errors in a normalized shape.
  * ============================================================================
  */
 

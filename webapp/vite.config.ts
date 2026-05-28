@@ -5,7 +5,7 @@
  *   Vite build configuration. We:
  *     - Enable the React Fast Refresh plugin.
  *     - Expose `@` as an alias for `src/` (matches tsconfig paths).
- *     - Proxy `/api` to the FastAPI citosmart in dev so the webapp never
+ *     - Proxy `/api` to the FastAPI orcaapi in dev so the webapp never
  *       sees CORS during local development.
  *     - Configure Vitest with jsdom for component tests.
  * ============================================================================

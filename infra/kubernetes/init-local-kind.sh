@@ -156,7 +156,7 @@ main() {
   wait_for_cnpg_cluster
   wait_for_rollout data-platform deployment/kafka
   wait_for_rollout data-platform statefulset/memcached
-  wait_for_rollout backend deployment/citosmart-api
+  wait_for_rollout backend deployment/orcaapi-api
   wait_for_rollout ingestion deployment/camera-service
   wait_for_rollout ingestion deployment/gps-service
   wait_for_rollout ai deployment/ai-service

@@ -23,7 +23,7 @@ npm run dev          # http://localhost:5173
 ```
 
 The dev server proxies `/api` to `http://localhost:8000`, so start the
-backend API with `uvicorn app.main:app --reload` from [`../citosmart/`](../citosmart/)
+backend API with `uvicorn app.main:app --reload` from [`../orcaapi/`](../orcaapi/)
 in another shell, or use `docker compose up` from the repo root.
 
 ## Project Layout

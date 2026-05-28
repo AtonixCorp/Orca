@@ -41,7 +41,7 @@ Recommended baseline:
 
 ## Container Placement
 
-- `citosmart`, `kafka`, and processing workers can run on compute nodes.
+- `orcaapi`, `kafka`, and processing workers can run on compute nodes.
 - control-plane services should avoid GPU hosts unless capacity is abundant.
 - pin GPU workloads with node labels such as `orca.role=compute-gpu`.
 

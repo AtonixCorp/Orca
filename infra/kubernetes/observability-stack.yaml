@@ -17,10 +17,10 @@ data:
         static_configs:
           - targets: ["prometheus.observability.svc.cluster.local:9090"]
 
-      - job_name: citosmart-api
+      - job_name: orcaapi-api
         metrics_path: /metrics
         static_configs:
-          - targets: ["citosmart-api.backend.svc.cluster.local:8000"]
+          - targets: ["orcaapi-api.backend.svc.cluster.local:8000"]
 
       - job_name: ingestion-producer
         static_configs:

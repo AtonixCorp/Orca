@@ -51,14 +51,14 @@ flowchart LR
 
 ## Related Surfaces
 
-- [../../citosmart/app/services/quantum_security.py](../../citosmart/app/services/quantum_security.py)
-- [../../citosmart/app/schemas/quantum.py](../../citosmart/app/schemas/quantum.py)
-- [../../citosmart/app/api/v1/endpoints/quantum.py](../../citosmart/app/api/v1/endpoints/quantum.py)
+- [../../orcaapi/app/services/quantum_security.py](../../orcaapi/app/services/quantum_security.py)
+- [../../orcaapi/app/schemas/quantum.py](../../orcaapi/app/schemas/quantum.py)
+- [../../orcaapi/app/api/v1/endpoints/quantum.py](../../orcaapi/app/api/v1/endpoints/quantum.py)
 - [../../scripts/ci/quantum_protect_audit.py](../../scripts/ci/quantum_protect_audit.py)
 
 ## Container and Usage Instructions
 
 ```bash
-docker compose up --build citosmart security-service
+docker compose up --build orcaapi security-service
 python3 scripts/ci/quantum_protect_audit.py logs/ci_audit.json logs/ci_audit.local.quantum.json
 ```

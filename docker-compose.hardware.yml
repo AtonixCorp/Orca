@@ -65,15 +65,15 @@ services:
       - backend
       - edge
     depends_on:
-      - citosmart
+      - orcaapi
     restart: unless-stopped
     logging: *stdout-logging
 
-  citosmart:
+  orcaapi:
     build:
-      context: ./citosmart
+      context: ./orcaapi
       image: atonixdev/api-gateway:1.0.0
-    container_name: orca-citosmart-hardware
+    container_name: orca-orcaapi-hardware
     env_file: .env
     environment:
       ORCA_DEPLOYMENT_MODE: ${ORCA_DEPLOYMENT_MODE:-hardware}
@@ -83,7 +83,7 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - citosmart_data:/app/data
+      - orcaapi_data:/app/data
     networks:
       - backend
       - monitoring
@@ -356,7 +356,7 @@ services:
     logging: *stdout-logging
 
 volumes:
-  citosmart_data:
+  orcaapi_data:
   pgdata:
   pgbackup:
   redisdata:

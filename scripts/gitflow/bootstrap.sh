@@ -35,7 +35,7 @@ gh api \
   "/repos/${repo}/branches/main/protection" \
   -f required_status_checks.strict=true \
   -f required_status_checks.contexts[]="GitFlow / GitFlow branch policy" \
-  -f required_status_checks.contexts[]="CI / Unit Tests and Quality (citosmart)" \
+  -f required_status_checks.contexts[]="CI / Unit Tests and Quality (orcaapi)" \
   -f required_status_checks.contexts[]="CI / Unit Tests and Quality (webapp)" \
   -f required_status_checks.contexts[]="Security / Security checklist sign-off" \
   -f required_status_checks.contexts[]="Security / Security checks (backend)" \
@@ -57,7 +57,7 @@ gh api \
   "/repos/${repo}/branches/develop/protection" \
   -f required_status_checks.strict=true \
   -f required_status_checks.contexts[]="GitFlow / GitFlow branch policy" \
-  -f required_status_checks.contexts[]="CI / Unit Tests and Quality (citosmart)" \
+  -f required_status_checks.contexts[]="CI / Unit Tests and Quality (orcaapi)" \
   -f required_status_checks.contexts[]="CI / Unit Tests and Quality (webapp)" \
   -f required_status_checks.contexts[]="Security / Security checklist sign-off" \
   -f required_status_checks.contexts[]="Security / Security checks (backend)" \

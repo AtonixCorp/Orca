@@ -15,7 +15,7 @@
 The repository is organized by domain. To keep it understandable, contributors
 should follow these top-level ownership rules:
 
-- `citosmart/` is the backend API application.
+- `orcaapi/` is the backend API application.
 - `services/` holds separately deployable service runtimes.
 - `webapp/` is the primary frontend application.
 
@@ -23,9 +23,9 @@ This document is the source of truth for those boundaries.
 
 ## Server Rule
 
-There is one default backend home today: `citosmart/`.
+There is one default backend home today: `orcaapi/`.
 
-Use `citosmart/` when you are adding:
+Use `orcaapi/` when you are adding:
 
 - API endpoints for the current FastAPI server.
 - Shared application logic, schemas, or config.
@@ -34,7 +34,7 @@ Use `citosmart/` when you are adding:
 Use `services/` only when you are creating or maintaining a backend component
 that is intentionally deployed as its own service.
 
-That means the server does not have two equal homes. `citosmart/` is the
+That means the server does not have two equal homes. `orcaapi/` is the
 backend API; folders in `services/` are separate service units.
 
 ## Core Folders
@@ -69,10 +69,10 @@ main backend.
 
 **Current note:**
 
-Today `citosmart/` is the default home for the backend API. New backend code
+Today `orcaapi/` is the default home for the backend API. New backend code
 should either:
 
-- live in `citosmart/` if it belongs to the main API service, or
+- live in `orcaapi/` if it belongs to the main API service, or
 - live in `services/<service-name>/` if it is intentionally being built as an
   independently deployable service.
 
@@ -92,7 +92,7 @@ Do not duplicate the same capability in both places.
 
 Application-specific ORM models and Alembic migrations should live with the
 backend API service that owns them. For the main backend, that means
-`citosmart/`. If the code base moves toward fully split services, each service
+`orcaapi/`. If the code base moves toward fully split services, each service
 should own its migrations, while `database/` remains the shared infrastructure
 layer.
 
@@ -129,7 +129,7 @@ paths have been removed.
 **Integration rule:**
 
 Expose inference through stable service interfaces consumed by `services/` or
-`citosmart/`; avoid coupling model internals directly to frontend or ingestion
+`orcaapi/`; avoid coupling model internals directly to frontend or ingestion
 layers.
 
 ### `webapp/`
@@ -183,7 +183,7 @@ records.
 
 ## Related Folders
 
-- `citosmart/`: backend API application, schemas, migrations, and business logic.
+- `orcaapi/`: backend API application, schemas, migrations, and business logic.
 - `infra/`: deployment infrastructure such as Kubernetes, Terraform,
   Prometheus, and Mosquitto.
 - `hardware/`: hardware integration assets, drivers, and operational support.
@@ -192,7 +192,7 @@ records.
 
 ## Recommended Working Rules
 
-1. Treat `citosmart/` as the default backend API location.
+1. Treat `orcaapi/` as the default backend API location.
 2. Keep shared DB infrastructure in `database/`, but keep app-local migrations
    with the app or service that owns the schema.
 3. Treat `webapp/` as the default destination for new frontend work.

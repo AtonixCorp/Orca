@@ -53,7 +53,7 @@ flowchart LR
 
 - [../../database/README.md](../../database/README.md)
 - [../../ingestion/README.md](../../ingestion/README.md)
-- [../../citosmart/app/db/models.py](../../citosmart/app/db/models.py)
+- [../../orcaapi/app/db/models.py](../../orcaapi/app/db/models.py)
 - [../../infra/terraform/README.md](../../infra/terraform/README.md)
 
 ## Container Run Instructions

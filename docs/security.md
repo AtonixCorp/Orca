@@ -33,7 +33,7 @@ Related references:
 
 ## CI and Review
 
-- [ ] `citosmart`: lint/tests pass locally where applicable.
+- [ ] `orcaapi`: lint/tests pass locally where applicable.
 - [ ] `webapp`: lint/tests/build pass locally where applicable.
 - [ ] Security workflow passes in CI.
 - [ ] PR description includes threat model notes for new data flows or privileged operations.

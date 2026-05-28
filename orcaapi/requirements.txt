@@ -1,0 +1,59 @@
+# ============================================================================
+# File: orcaapi/requirements.txt
+# Purpose:
+#   Runtime Python dependencies for Orca — a Python-first urban data
+#   backbone. Grouped by role so contributors can see what each library does.
+#   Pinned to compatible minor versions; bump with care and run the full
+#   test suite before merging.
+# ============================================================================
+
+# ---- API layer ----
+fastapi==0.115.2
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.12
+strawberry-graphql[fastapi]==0.275.2
+
+# ---- IoT ingestion ----
+paho-mqtt==2.1.0                  # MQTT client for sensor data
+kafka-python==2.0.2               # Streaming ingestion / event bus (sync)
+aiokafka==0.11.0                  # Async Kafka producer/consumer (FastAPI-friendly)
+
+# ---- Data processing & analytics ----
+numpy==2.1.2
+pandas==2.2.3
+scikit-learn==1.5.2               # Classical ML / anomaly detection
+# Heavy engines are optional — install on demand to keep the image slim:
+#   pip install pyspark==3.5.3 dask==2024.9.1 tensorflow==2.17.0
+
+# ---- Databases & ORM ----
+SQLAlchemy==2.0.36                # Sync + async ORM
+greenlet==3.1.1                   # Required by SQLAlchemy async session internals
+asyncpg==0.31.0                   # PostgreSQL async driver (Python 3.13 compatible)
+psycopg2-binary==2.9.10           # PostgreSQL sync driver (used by Spark/tools)
+GeoAlchemy2==0.15.2               # PostGIS / geometry column support
+pymongo==4.10.1                   # MongoDB (optional document store)
+happybase==1.2.0                  # HBase client (optional — Thrift gateway)
+alembic==1.13.3                   # Schema migrations
+
+# ---- Cache ----
+redis==5.1.1
+pymemcache==4.0.0
+
+# ---- Security ----
+cryptography==43.0.3              # AES, RSA, X.509, key derivation
+PyJWT[crypto]==2.9.0              # JWT issuance + verification
+passlib[bcrypt]==1.7.4            # Password hashing
+bcrypt==4.0.1                     # Passlib-compatible bcrypt backend
+
+# ---- HTTP / utilities ----
+httpx==0.27.2
+shapely==2.0.6
+structlog==24.4.0
+prometheus-client==0.21.0
+PyYAML==6.0.2
+
+# ---- Visualization side-app (Plotly Dash) ----
+dash==2.18.1
+plotly==5.24.1

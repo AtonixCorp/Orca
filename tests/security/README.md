@@ -26,5 +26,5 @@ tests/security/
 pytest tests/security -v
 ```
 
-These tests complement backend tests in [`../citosmart/tests/`](../citosmart/tests/)
+These tests complement backend tests in [`../orcaapi/tests/`](../orcaapi/tests/)
 and frontend tests in [`../webapp/src/`](../webapp/src/).

@@ -22,6 +22,6 @@ OpenStack VMs.
 
 ## Blue/Green API routing
 
-- `api-router` owns host port `APP_PORT` and forwards traffic to either `citosmart-blue` or `citosmart-green`.
+- `api-router` owns host port `APP_PORT` and forwards traffic to either `orcaapi-blue` or `orcaapi-green`.
 - The active slot is tracked in `infra/deploy/runtime/active_api_slot` on the deployment target.
 - `update_stack.sh` deploys the inactive slot, validates it, switches the router, then optionally stops the previous slot.

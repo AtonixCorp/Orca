@@ -54,8 +54,8 @@ flowchart TD
 - [../SECURITY_DEEP_DIVE.md](../SECURITY_DEEP_DIVE.md)
 - [../../SECURITY.md](../../SECURITY.md)
 - [../../security/README.md](../../security/README.md)
-- [../../citosmart/app/core/security.py](../../citosmart/app/core/security.py)
-- [../../citosmart/app/core/crypto.py](../../citosmart/app/core/crypto.py)
+- [../../orcaapi/app/core/security.py](../../orcaapi/app/core/security.py)
+- [../../orcaapi/app/core/crypto.py](../../orcaapi/app/core/crypto.py)
 - [../../scripts/ci/record_ci_audit.py](../../scripts/ci/record_ci_audit.py)
 - [../../scripts/ci/quantum_protect_audit.py](../../scripts/ci/quantum_protect_audit.py)
 

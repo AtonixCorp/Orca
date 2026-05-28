@@ -40,9 +40,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: citosmart
-            context: ./citosmart
-            dockerfile: ./citosmart/Dockerfile
+          - image: orcaapi
+            context: ./orcaapi
+            dockerfile: ./orcaapi/Dockerfile
           - image: webapp
             context: ./webapp
             dockerfile: ./webapp/Dockerfile

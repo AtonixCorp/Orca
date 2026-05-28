@@ -6,7 +6,7 @@ Split-function container services for Orca.
 
 This folder hosts deployable microservice containers used by Kubernetes and
 local compose-based testing. The main backend application lives in
-`../citosmart/`.
+`../orcaapi/`.
 
 ## Services
 

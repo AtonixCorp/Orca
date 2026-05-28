@@ -49,7 +49,7 @@ exists, how the parts fit together, and where to go next.
 | Goal | Read This First | Then Continue With |
 |---|---|---|
 | Understand the platform at a glance | [README.md](../README.md) | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Explore the HTTP surface | [API.md](API.md) | `citosmart/app/api/v1/` |
+| Explore the HTTP surface | [API.md](API.md) | `orcaapi/app/api/v1/` |
 | Run locally with containers | [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) | [../docker-compose.yml](../docker-compose.yml) |
 | Understand security posture | [SECURITY_DEEP_DIVE.md](SECURITY_DEEP_DIVE.md) | [../security/README.md](../security/README.md) |
 | Follow the contribution model | [../CONTRIBUTING.md](../CONTRIBUTING.md) | [GITFLOW.md](GITFLOW.md) |
@@ -111,7 +111,7 @@ Orca is meant to evolve into a platform where:
 
 ### Core Application
 
-- [../citosmart](../citosmart)
+- [../orcaapi](../orcaapi)
 Purpose:
 The FastAPI backend, domain services, schemas, database models, auth logic,
 camera registry, ingestion services, and quantum-ready APIs.
@@ -260,8 +260,8 @@ Key entry points:
 
 - [SECURITY_DEEP_DIVE.md](SECURITY_DEEP_DIVE.md)
 - [../security/README.md](../security/README.md)
-- [../citosmart/app/services/quantum_security.py](../citosmart/app/services/quantum_security.py)
-- [../citosmart/app/api/v1/endpoints/quantum.py](../citosmart/app/api/v1/endpoints/quantum.py)
+- [../orcaapi/app/services/quantum_security.py](../orcaapi/app/services/quantum_security.py)
+- [../orcaapi/app/api/v1/endpoints/quantum.py](../orcaapi/app/api/v1/endpoints/quantum.py)
 
 CI audit artifacts can also be wrapped in a quantum-ready envelope using
 [../scripts/ci/quantum_protect_audit.py](../scripts/ci/quantum_protect_audit.py).
@@ -359,7 +359,7 @@ Read the operating guide here:
 1. [SECURITY_DEEP_DIVE.md](SECURITY_DEEP_DIVE.md)
 2. [../SECURITY.md](../SECURITY.md)
 3. [../security/README.md](../security/README.md)
-4. [../citosmart/app/services/quantum_security.py](../citosmart/app/services/quantum_security.py)
+4. [../orcaapi/app/services/quantum_security.py](../orcaapi/app/services/quantum_security.py)
 
 ### For Evaluators and Stakeholders
 

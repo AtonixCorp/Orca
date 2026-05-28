@@ -68,10 +68,10 @@ Dashboard ──REST/WS──> API Gateway ──read──> Redis + Storage
 
 | Want to add...      | Touch these files                                |
 |---------------------|--------------------------------------------------|
-| A new sensor type   | `citosmart/app/schemas/sensor.py` (extend `SensorKind`) |
-| A new endpoint      | `citosmart/app/api/v1/endpoints/<name>.py` + register in `router.py` |
+| A new sensor type   | `orcaapi/app/schemas/sensor.py` (extend `SensorKind`) |
+| A new endpoint      | `orcaapi/app/api/v1/endpoints/<name>.py` + register in `router.py` |
 | A new dashboard panel | `webapp/src/components/<Name>Panel.tsx`      |
-| A new connector     | `citosmart/app/services/connectors/<name>.py` (planned) |
+| A new connector     | `orcaapi/app/services/connectors/<name>.py` (planned) |
 
 ## Future Work
 

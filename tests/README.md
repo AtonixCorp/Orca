@@ -3,7 +3,7 @@
 Cross-module unit and integration tests for Orca.
 
 Backend-specific tests live next to the backend at
-[`../citosmart/tests/`](../citosmart/tests/). Frontend tests live under
+[`../orcaapi/tests/`](../orcaapi/tests/). Frontend tests live under
 [`../webapp/src/`](../webapp/src/). This folder is for tests that span
 multiple modules (ingestion ↔ ai_models ↔ database, etc.) or that
 exercise contributions from [`../contrib/`](../contrib/).
@@ -31,7 +31,7 @@ pytest tests/ -v
 Backend test suite:
 
 ```bash
-cd citosmart
+cd orcaapi
 pytest -v
 ```
 

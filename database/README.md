@@ -9,7 +9,7 @@ Schemas, connectors, and migrations for Orca.
 - **TimescaleDB** (PostgreSQL extension) — time-series sensor data
 
 The authoritative SQLAlchemy models and Alembic migrations live in the
-backend API service at [`../citosmart/`](../citosmart/).
+backend API service at [`../orcaapi/`](../orcaapi/).
 This folder collects **shared schema artifacts** and **non-backend
 connectors**.
 

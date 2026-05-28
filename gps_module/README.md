@@ -31,7 +31,7 @@ gps_module/
 - Coordinates are stored as **WGS84** (lat/lon, decimal degrees).
 - Time is stored in **UTC**.
 - All location events publish to the Kafka topic configured in
-  `citosmart`'s settings.
+  `orcaapi`'s settings.
 - NMEA 0183 and NMEA 2000 are the preferred interoperability standards for
   incoming GNSS data.
 - GPS payloads must be protected in transit with TLS and per-message

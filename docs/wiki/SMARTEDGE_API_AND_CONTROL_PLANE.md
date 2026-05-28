@@ -52,14 +52,14 @@ flowchart LR
 
 ## Key Surfaces
 
-- [../../citosmart/app/main.py](../../citosmart/app/main.py)
-- [../../citosmart/app/api/v1/router.py](../../citosmart/app/api/v1/router.py)
-- [../../citosmart/app/api/v1/endpoints](../../citosmart/app/api/v1/endpoints)
+- [../../orcaapi/app/main.py](../../orcaapi/app/main.py)
+- [../../orcaapi/app/api/v1/router.py](../../orcaapi/app/api/v1/router.py)
+- [../../orcaapi/app/api/v1/endpoints](../../orcaapi/app/api/v1/endpoints)
 - [../API.md](../API.md)
 
 ## Container Run Instructions
 
 ```bash
-docker compose up --build citosmart
+docker compose up --build orcaapi
 curl http://localhost:8000/api/v1/health/live
 ```

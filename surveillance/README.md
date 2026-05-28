@@ -254,7 +254,7 @@ ORCA_KAFKA_ENABLED=0 pytest tests/test_surveillance_layer.py -q
 Run compile validation:
 
 ```bash
-python3 -m compileall surveillance ingestion citosmart/app
+python3 -m compileall surveillance ingestion orcaapi/app
 ```
 
 Validate local compose shape:

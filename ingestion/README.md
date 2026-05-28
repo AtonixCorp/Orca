@@ -22,7 +22,7 @@ the Orca core for processing, storage, and analytics.
 - **Python 3.11+** — connector implementations
 
 > The production-grade Python backend API lives under
-> [`../citosmart/`](../citosmart/). This folder is for **new connectors**
+> [`../orcaapi/`](../orcaapi/). This folder is for **new connectors**
 > and ingestion adapters contributed by the community.
 
 ## Layout
@@ -42,7 +42,7 @@ ingestion/
 
 1. Create `ingestion/connectors/<your_source>/`.
 2. Implement the connector following the interface used by
-   the backend API service in `citosmart/app/services/`.
+   the backend API service in `orcaapi/app/services/`.
 3. Document configuration (env vars, topics, schemas) in a local `README.md`.
 4. Add unit + integration tests under [`../tests/`](../tests/).
 5. Submit a PR per the [contribution workflow](../CONTRIBUTING.md).

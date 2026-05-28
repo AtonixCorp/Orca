@@ -17,7 +17,7 @@ import sys
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "citosmart"))
+sys.path.insert(0, str(ROOT / "orcaapi"))
 
 from app.schemas.quantum import HybridEnvelopeIn, PqcKemAlgorithm, QkdKeyImportIn
 from app.services.quantum_security import quantum_security_service

@@ -15,7 +15,7 @@ resources:
   - local-db.yaml
   - local-frontend-config.yaml
   - local-kafka.yaml
-  - local-citosmart-api.yaml
+  - local-orcaapi-api.yaml
   - local-plotly-dash.yaml
 
 patchesStrategicMerge:

@@ -17,8 +17,8 @@ service-to-service authentication.
 
 ## Implementation Pointers
 
-- Backend primitives: [../../citosmart/app/core/security.py](../../citosmart/app/core/security.py)
-- Auth endpoints: [../../citosmart/app/api/v1/endpoints/auth.py](../../citosmart/app/api/v1/endpoints/auth.py)
+- Backend primitives: [../../orcaapi/app/core/security.py](../../orcaapi/app/core/security.py)
+- Auth endpoints: [../../orcaapi/app/api/v1/endpoints/auth.py](../../orcaapi/app/api/v1/endpoints/auth.py)
 - RBAC matrix: [../rbac/policies.yaml](../rbac/policies.yaml)
 
 ## Required Environment Variables

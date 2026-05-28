@@ -32,9 +32,9 @@ flowchart LR
 
 | Surface | Implementation |
 |---|---|
-| Map API overview | [../../citosmart/app/api/v1/endpoints/control_plane.py](../../citosmart/app/api/v1/endpoints/control_plane.py) |
-| Map aggregation and trust policy | [../../citosmart/app/services/control_plane.py](../../citosmart/app/services/control_plane.py) |
-| Map schemas | [../../citosmart/app/schemas/control_plane.py](../../citosmart/app/schemas/control_plane.py) |
+| Map API overview | [../../orcaapi/app/api/v1/endpoints/control_plane.py](../../orcaapi/app/api/v1/endpoints/control_plane.py) |
+| Map aggregation and trust policy | [../../orcaapi/app/services/control_plane.py](../../orcaapi/app/services/control_plane.py) |
+| Map schemas | [../../orcaapi/app/schemas/control_plane.py](../../orcaapi/app/schemas/control_plane.py) |
 | Dashboard map client | [../../webapp/src/api/map.ts](../../webapp/src/api/map.ts) |
 | Leaflet map panel | [../../webapp/src/components/SmartMapPanel.tsx](../../webapp/src/components/SmartMapPanel.tsx) |
 | Dashboard composition | [../../webapp/src/pages/Dashboard.tsx](../../webapp/src/pages/Dashboard.tsx) |

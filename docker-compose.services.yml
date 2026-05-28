@@ -21,11 +21,11 @@ services:
     restart: unless-stopped
     logging: *stdout-logging
 
-  citosmart-blue:
+  orcaapi-blue:
     build:
-      context: ./citosmart
-      image: ${CITOSMART_IMAGE:-atonixdev/api-gateway:1.0.0}
-    container_name: orca-citosmart-blue
+      context: ./orcaapi
+      image: ${ORCAAPI_IMAGE:-atonixdev/api-gateway:1.0.0}
+    container_name: orca-orcaapi-blue
     env_file: .env
     depends_on:
       postgres:
@@ -50,11 +50,11 @@ services:
     restart: unless-stopped
     logging: *stdout-logging
 
-  citosmart-green:
+  orcaapi-green:
     build:
-      context: ./citosmart
-      image: ${CITOSMART_IMAGE:-atonixdev/api-gateway:1.0.0}
-    container_name: orca-citosmart-green
+      context: ./orcaapi
+      image: ${ORCAAPI_IMAGE:-atonixdev/api-gateway:1.0.0}
+    container_name: orca-orcaapi-green
     env_file: .env
     depends_on:
       postgres:
@@ -80,7 +80,7 @@ services:
     logging: *stdout-logging
 
   event-consumer-raw:
-    image: ${CITOSMART_IMAGE:-atonixdev/api-gateway:1.0.0}
+    image: ${ORCAAPI_IMAGE:-atonixdev/api-gateway:1.0.0}
     container_name: orca-event-consumer-raw
     env_file: .env
     command: ["python", "-m", "app.workers.event_consumer_runner"]
@@ -93,7 +93,7 @@ services:
     logging: *stdout-logging
 
   event-consumer-clean:
-    image: ${CITOSMART_IMAGE:-atonixdev/api-gateway:1.0.0}
+    image: ${ORCAAPI_IMAGE:-atonixdev/api-gateway:1.0.0}
     container_name: orca-event-consumer-clean
     env_file: .env
     command: ["python", "-m", "app.workers.event_consumer_runner"]
@@ -106,7 +106,7 @@ services:
     logging: *stdout-logging
 
   event-consumer-alerts:
-    image: ${CITOSMART_IMAGE:-atonixdev/api-gateway:1.0.0}
+    image: ${ORCAAPI_IMAGE:-atonixdev/api-gateway:1.0.0}
     container_name: orca-event-consumer-alerts
     env_file: .env
     command: ["python", "-m", "app.workers.event_consumer_runner"]
