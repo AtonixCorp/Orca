@@ -37,7 +37,14 @@ services:
       - ./infra/deploy/nginx/api-router.conf:/etc/nginx/conf.d/default.conf:ro
       - ./infra/deploy/nginx/upstreams/api-local.conf:/etc/nginx/api-upstream.conf:ro
     depends_on:
-      - orcaapi
+      orcaapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/__router/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   orcaapi:
@@ -91,12 +98,18 @@ services:
       retries: 3
       start_period: 20s
     depends_on:
-      - api-router
-      - drone-gateway
-      - mission-control
-      - mapping-geospatial
-      - drone-camera-ingestion
-      - threat-detection
+      api-router:
+        condition: service_healthy
+      drone-gateway:
+        condition: service_started
+      mission-control:
+        condition: service_started
+      mapping-geospatial:
+        condition: service_started
+      drone-camera-ingestion:
+        condition: service_started
+      threat-detection:
+        condition: service_started
     restart: unless-stopped
 
   drone-gateway:

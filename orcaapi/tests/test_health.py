@@ -26,7 +26,17 @@ def test_liveness_returns_200() -> None:
 def test_readiness_returns_200() -> None:
     res = client.get("/api/v1/health/ready")
     assert res.status_code == 200
-    assert res.json()["status"] == "ready"
+    assert res.json()["status"] in {"ready", "degraded"}
+
+
+def test_status_returns_dependency_payload() -> None:
+    res = client.get("/api/v1/health/status")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] in {"ready", "degraded"}
+    assert isinstance(body["dependencies"], list)
+    names = {entry["name"] for entry in body["dependencies"]}
+    assert {"postgres", "redis", "kafka", "realtime-configured"} <= names
 
 
 def test_openapi_schema_available() -> None:

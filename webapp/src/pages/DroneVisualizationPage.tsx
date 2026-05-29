@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 
 import CommandOpsLayout from "@/components/CommandOpsLayout";
-import CommandCenterMap from "@/components/CommandCenterMap";
+import GlobalCesiumMap from "@/components/GlobalCesiumMap";
+import { useGpsRealtime } from "@/api/gpsRealtime";
 import { useRealtimeCommandCenter } from "@/api/realtime";
 import { useCameraFeeds, useDroneFleet, useDroneMissions, useThreatAlerts } from "@/api/droneGateway";
 
@@ -20,6 +21,7 @@ function deg(value: number) {
 export default function DroneVisualizationPage() {
   const [selectedDroneId, setSelectedDroneId] = useState("");
   const realtime = useRealtimeCommandCenter("drone");
+  const gpsRealtime = useGpsRealtime("drone");
   const fleetQuery = useDroneFleet();
   const feedsQuery = useCameraFeeds();
   const missionQuery = useDroneMissions();
@@ -32,39 +34,27 @@ export default function DroneVisualizationPage() {
   const activeFeed = feedsQuery.data?.find((feed) => feed.drone_id === activeDrone?.drone_id) ?? feedsQuery.data?.[0] ?? null;
   const activeMission = missionQuery.data?.find((mission) => mission.drone_id === activeDrone?.drone_id) ?? missionQuery.data?.[0] ?? null;
 
-  const mapAssets = useMemo(
-    () =>
-      drones.map((drone) => ({
-        id: drone.drone_id,
-        kind: "drone" as const,
-        label: drone.drone_id,
-        status: drone.status,
-        subtitle: `${drone.flight_mode} · ${Math.round(drone.battery_percent)}%`,
-        latitude: drone.position.latitude,
-        longitude: drone.position.longitude,
-      })),
-    [drones],
-  );
+  const mapDevices = useMemo(() => {
+    if (gpsRealtime.devices.length > 0) {
+      return gpsRealtime.devices;
+    }
 
-  const missionPath = activeMission
-    ? {
-        id: "mission-path",
-        data: {
-          type: "FeatureCollection" as const,
-          features: [
-            {
-              type: "Feature" as const,
-              geometry: {
-                type: "LineString",
-                coordinates: activeMission.waypoints.map((point) => [point.longitude, point.latitude]),
-              },
-              properties: { name: activeMission.name },
-            },
-          ],
-        },
-        color: "#00e0ff",
-      }
-    : null;
+    return drones.map((drone) => ({
+      device_id: drone.drone_id,
+      channel: "drone" as const,
+      device_type: "drone" as const,
+      name: drone.drone_id,
+      icon: "drone",
+      color: "#8fe5db",
+      status: drone.status,
+      latitude: drone.position.latitude,
+      longitude: drone.position.longitude,
+      altitude: drone.position.altitude_m ?? 0,
+      speed: drone.speed_mps,
+      heading: drone.heading_deg,
+      timestamp: new Date().toISOString(),
+    }));
+  }, [drones, gpsRealtime.devices]);
 
   const logs = [
     `${activeDrone?.drone_id ?? "no-drone"} mode ${activeDrone?.flight_mode ?? "n/a"}`,
@@ -124,20 +114,18 @@ export default function DroneVisualizationPage() {
 
         <section className="ops-panel">
           <div className="ops-panel-head">
-            <h3>GPS Trail + Mission Path</h3>
-            <span className="ops-chip">PX4 + MAVLink</span>
+            <h3>Global 3D Flight Map (Cesium)</h3>
+            <span className="ops-chip">GPS live + mission overlay</span>
           </div>
-          <CommandCenterMap
-            assets={mapAssets}
-            threatAlerts={threatQuery.data ?? []}
-            zones={[]}
-            selectedAssetId={activeDrone?.drone_id ?? null}
-            drawPoints={[]}
-            onMapClick={() => undefined}
-            onSelectAsset={() => undefined}
-            mode="2d"
-            cameraCorridors={[]}
-            geoJsonLayers={missionPath ? [missionPath] : []}
+          <GlobalCesiumMap
+            devices={mapDevices}
+            missionPath={
+              activeMission?.waypoints.map((point) => ({
+                latitude: point.latitude,
+                longitude: point.longitude,
+                altitude: point.altitude_m ?? 0,
+              })) ?? []
+            }
           />
         </section>
       </div>

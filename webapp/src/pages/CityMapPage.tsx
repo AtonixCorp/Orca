@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 
 import CommandOpsLayout from "@/components/CommandOpsLayout";
-import CommandCenterMap from "@/components/CommandCenterMap";
+import GlobalCesiumMap from "@/components/GlobalCesiumMap";
+import GlobalMapLibreMap from "@/components/GlobalMapLibreMap";
 import { useCityMapPayload, useDroneFleet, useMappingGeofences, useMappingSearch, useThreatAlerts } from "@/api/droneGateway";
+import { useGpsRealtime } from "@/api/gpsRealtime";
 import { useSmartMapOverview } from "@/api/map";
 import { useRealtimeCommandCenter } from "@/api/realtime";
 
@@ -26,7 +28,6 @@ export default function CityMapPage() {
   const [mapSource, setMapSource] = useState<(typeof mapSources)[number]>("osm");
   const [mapMode, setMapMode] = useState<"2d" | "3d" | "street">("2d");
   const [drawTool, setDrawTool] = useState<DrawTool>("polygon");
-  const [drawPoints, setDrawPoints] = useState<Array<{ latitude: number; longitude: number }>>([]);
 
   const mapQuery = useSmartMapOverview();
   const geofenceQuery = useMappingGeofences();
@@ -35,6 +36,7 @@ export default function CityMapPage() {
   const threatQuery = useThreatAlerts();
   const searchQuery = useMappingSearch(`${city} ${missionArea}`, 6);
   const realtime = useRealtimeCommandCenter("city");
+  const gpsRealtime = useGpsRealtime("city");
 
   const assets = useMemo(() => {
     const mapDevices = mapQuery.data?.devices ?? [];
@@ -143,29 +145,48 @@ export default function CityMapPage() {
             </div>
           </div>
 
-          <CommandCenterMap
-            assets={assets}
-            threatAlerts={threatQuery.data ?? []}
-            zones={[]}
-            selectedAssetId={assets[0]?.id ?? null}
-            drawPoints={drawPoints}
-            onMapClick={(point) => setDrawPoints((current) => [...current, point].slice(-20))}
-            onSelectAsset={() => undefined}
-            mode={mapMode}
-            sceneOverview={null}
-            cameraCorridors={(mapQuery.data?.camera_corridors ?? []).map((corridor) => ({
-              id: corridor.id,
-              label: corridor.label,
-              source_device_id: corridor.source_device_id,
-              polygon: corridor.polygon,
-              coverage_score: corridor.coverage_score,
-            }))}
-            geoJsonLayers={[
-              { id: "geofence", data: geofenceQuery.data?.geojson ?? null, color: "#00e0ff" },
-              { id: "search", data: searchQuery.data?.geojson ?? null, color: "#7ae5be" },
-              { id: "mission-routes", data: cityMapQuery.data?.geojson_layers?.mission_routes ?? null, color: "#c5d7ff" },
-            ]}
-          />
+          {mapMode === "3d" ? (
+            <GlobalCesiumMap
+              devices={gpsRealtime.devices.length > 0 ? gpsRealtime.devices : assets.map((asset) => ({
+                device_id: asset.id,
+                channel: "city",
+                device_type: asset.kind === "robot" ? "robot" : asset.kind === "drone" ? "drone" : "sensor",
+                name: asset.label,
+                icon: asset.kind,
+                color: "#57c7d4",
+                status: asset.status,
+                latitude: asset.latitude,
+                longitude: asset.longitude,
+                altitude: 0,
+                speed: 0,
+                heading: 0,
+                timestamp: new Date().toISOString(),
+              }))}
+            />
+          ) : (
+            <GlobalMapLibreMap
+              devices={gpsRealtime.devices.length > 0 ? gpsRealtime.devices : assets.map((asset) => ({
+                device_id: asset.id,
+                channel: "city",
+                device_type: asset.kind === "robot" ? "robot" : asset.kind === "drone" ? "drone" : "sensor",
+                name: asset.label,
+                icon: asset.kind,
+                color: "#57c7d4",
+                status: asset.status,
+                latitude: asset.latitude,
+                longitude: asset.longitude,
+                altitude: 0,
+                speed: 0,
+                heading: 0,
+                timestamp: new Date().toISOString(),
+              }))}
+              geoJsonLayers={[
+                { id: "geofence", data: geofenceQuery.data?.geojson ?? null, color: "#00e0ff" },
+                { id: "search", data: searchQuery.data?.geojson ?? null, color: "#7ae5be" },
+                { id: "mission-routes", data: cityMapQuery.data?.geojson_layers?.mission_routes ?? null, color: "#c5d7ff" },
+              ]}
+            />
+          )}
         </section>
       </div>
     </CommandOpsLayout>

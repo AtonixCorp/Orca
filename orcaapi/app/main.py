@@ -26,11 +26,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from uuid import uuid4
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 
 from app.api.v1.router import api_router
@@ -195,6 +198,40 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def request_tracing_middleware(request: Request, call_next):
+        request_id = request.headers.get("x-request-id", str(uuid4()))
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception as exc:  # noqa: BLE001
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            logger.exception(
+                "request.failed request_id=%s method=%s path=%s duration_ms=%s error=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+                exc,
+            )
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error", "request_id": request_id},
+                headers={"X-Request-ID": request_id},
+            )
+
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        response.headers["X-Request-ID"] = request_id
+        logger.info(
+            "request.completed request_id=%s method=%s path=%s status_code=%s duration_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response
 
     # Versioned API router.
     app.include_router(api_router, prefix="/api/v1")
