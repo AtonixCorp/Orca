@@ -13,11 +13,12 @@
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import cesium from "vite-plugin-cesium";
 import path from "node:path";
 
 export default defineConfig({
   base: process.env.GITHUB_PAGES === "true" ? "/orca/" : "/",
-  plugins: [react()],
+  plugins: [react(), cesium()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

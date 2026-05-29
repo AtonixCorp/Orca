@@ -220,7 +220,7 @@ export default function Dashboard() {
   const [selectedRobotIds, setSelectedRobotIds] = useState<string[]>([]);
   const deferredAssetFilter = useDeferredValue(assetFilter);
   const [recordingEnabled, setRecordingEnabled] = useState(false);
-  const realtime = useRealtimeCommandCenter(true);
+  const realtime = useRealtimeCommandCenter("city", true);
 
   const gatewayReady = useDroneGatewayReady();
   const droneFleetQuery = useDroneFleet();

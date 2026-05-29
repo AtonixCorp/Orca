@@ -19,25 +19,118 @@ from app.services.control_plane import control_plane_service
 from app.services.event_pipeline import event_pipeline_service
 
 
+DashboardChannel = str
+
+
 class RealtimeBusService:
     def __init__(self) -> None:
         self._settings = get_settings()
 
-    async def snapshot(self) -> dict[str, Any]:
-        async with AsyncSessionLocal() as session:
-            overview = await control_plane_service.overview(session)
-            map_overview = await control_plane_service.map_overview(session)
+    async def snapshot(self, channel: DashboardChannel = "global") -> dict[str, Any]:
+        overview_payload: dict[str, Any]
+        map_payload: dict[str, Any]
+
+        try:
+            async with AsyncSessionLocal() as session:
+                overview = await control_plane_service.overview(session)
+                map_overview = await control_plane_service.map_overview(session)
+            overview_payload = overview.model_dump(mode="json")
+            map_payload = map_overview.model_dump(mode="json")
+        except Exception:
+            overview_payload = {
+                "device_manager": {"devices": [], "summary": {"camera": 0, "sensor": 0, "gps": 0, "iot": 0}},
+                "security": {"status": "degraded", "alerts": [], "audit_pipeline_status": "degraded"},
+                "traffic": {"active_incidents": [], "alerts": [], "congestion_score": 0.0},
+                "data_flow": [],
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+            map_payload = {
+                "devices": [],
+                "heatmap": [],
+                "camera_corridors": [],
+                "visible_layers": [],
+                "security_policy": "degraded",
+            }
 
         surveillance = await self._fetch_surveillance_surfaces()
 
+        filtered_surveillance = surveillance
+        filtered_map = map_payload
+        filtered_control_plane = overview_payload
+        filtered_events = [event.model_dump(mode="json") for event in event_pipeline_service.live_events(limit=20)]
+        filtered_alerts = [alert.model_dump(mode="json") for alert in event_pipeline_service.alerts(limit=20)]
+
+        if channel == "drone":
+            filtered_surveillance = {
+                "drones": surveillance.get("drones", {}),
+                "missions": surveillance.get("missions", []),
+                "camera_feeds": surveillance.get("camera_feeds", []),
+                "threat_alerts": surveillance.get("threat_alerts", []),
+                "mapping_overlays": surveillance.get("mapping_overlays", {}),
+            }
+        elif channel == "robot":
+            filtered_surveillance = {
+                "drones": {"drones": [], "registry": []},
+                "missions": [],
+                "camera_feeds": [],
+                "threat_alerts": surveillance.get("threat_alerts", []),
+                "mapping_overlays": surveillance.get("mapping_overlays", {}),
+            }
+            filtered_events = [event for event in filtered_events if str(event.get("source", "")).startswith("robot")]
+        elif channel == "city":
+            filtered_surveillance = {
+                "drones": surveillance.get("drones", {}),
+                "missions": surveillance.get("missions", []),
+                "camera_feeds": surveillance.get("camera_feeds", []),
+                "threat_alerts": surveillance.get("threat_alerts", []),
+                "mapping_overlays": surveillance.get("mapping_overlays", {}),
+            }
+        elif channel == "mission":
+            filtered_surveillance = {
+                "drones": surveillance.get("drones", {}),
+                "missions": surveillance.get("missions", []),
+                "camera_feeds": [],
+                "threat_alerts": surveillance.get("threat_alerts", []),
+                "mapping_overlays": {},
+            }
+            filtered_map = {
+                "devices": [],
+                "heatmap": [],
+                "camera_corridors": [],
+                "visible_layers": [],
+                "security_policy": str(map_payload.get("security_policy", "degraded")),
+            }
+        elif channel == "individualization":
+            filtered_surveillance = {
+                "drones": surveillance.get("drones", {}),
+                "missions": [],
+                "camera_feeds": [],
+                "threat_alerts": [],
+                "mapping_overlays": {},
+            }
+            filtered_events = []
+            filtered_alerts = []
+            filtered_map = {
+                "devices": map_payload.get("devices", []),
+                "heatmap": [],
+                "camera_corridors": [],
+                "visible_layers": ["asset-profiles"],
+                "security_policy": str(map_payload.get("security_policy", "degraded")),
+            }
+            filtered_control_plane = {
+                **overview_payload,
+                "data_flow": [],
+            }
+
         return {
             "type": "command-center.snapshot",
+            "channel": channel,
             "generated_at": datetime.now(UTC).isoformat(),
-            "events": [event.model_dump(mode="json") for event in event_pipeline_service.live_events(limit=20)],
-            "alerts": [alert.model_dump(mode="json") for alert in event_pipeline_service.alerts(limit=20)],
-            "control_plane": overview.model_dump(mode="json"),
-            "map": map_overview.model_dump(mode="json"),
-            "surveillance": surveillance,
+            "events": filtered_events,
+            "alerts": filtered_alerts,
+            "control_plane": filtered_control_plane,
+            "map": filtered_map,
+            "surveillance": filtered_surveillance,
         }
 
     async def _fetch_surveillance_surfaces(self) -> dict[str, Any]:

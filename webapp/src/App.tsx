@@ -12,18 +12,21 @@ import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Architecture from "./pages/Architecture";
+import CityMapPage from "./pages/CityMapPage";
 import Community from "./pages/Community";
-import Dashboard from "./pages/Dashboard";
-import DroneDashboard from "./pages/DroneDashboard";
+import DroneVisualizationPage from "./pages/DroneVisualizationPage";
 import Mission from "./pages/Mission";
+import MissionControlPage from "./pages/MissionControlPage";
 import NotFound from "./pages/NotFound";
-import RobotDashboard from "./pages/RobotDashboard";
+import RoboticsVisualizationPage from "./pages/RoboticsVisualizationPage";
+import IndividualizationPage from "./pages/IndividualizationPage";
+import NavigationHubPage from "./pages/NavigationHubPage";
 import Roadmap from "./pages/Roadmap";
 import Visualization from "./pages/Visualization";
 
 export default function App() {
   const location = useLocation();
-  const isCommandCenterRoute = location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/");
+  const isCommandCenterRoute = location.pathname === "/hub" || location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/");
 
   return (
     <div className={isCommandCenterRoute ? "app-shell app-shell-dashboard" : "app-shell"}>
@@ -36,7 +39,7 @@ export default function App() {
             <Link to="/architecture">Architecture</Link>
             <Link to="/community">Community</Link>
             <Link to="/roadmap">Roadmap</Link>
-            <Link to="/dashboard/drone">Dashboard</Link>
+            <Link to="/hub">Dashboard</Link>
             <Link to="/visualization">Visualization</Link>
           </nav>
         </header>
@@ -44,19 +47,23 @@ export default function App() {
 
       <main className={isCommandCenterRoute ? "app-main app-main-dashboard" : "app-main"}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard/drone" replace />} />
+          <Route path="/" element={<Navigate to="/hub" replace />} />
+          <Route path="/hub" element={<NavigationHubPage />} />
           <Route path="/home" element={<Home />} />
           <Route path="/mission" element={<Mission />} />
           <Route path="/architecture" element={<Architecture />} />
           <Route path="/community" element={<Community />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/dashboard" element={<Navigate to="/dashboard/drone" replace />} />
-          <Route path="/dashboard/drone" element={<DroneDashboard />} />
-          <Route path="/dashboard/robot" element={<RobotDashboard />} />
-          <Route path="/dashboard/city" element={<Navigate to="/dashboard/cityview" replace />} />
-          <Route path="/dashboard/city-view" element={<Navigate to="/dashboard/cityview" replace />} />
-          <Route path="/dashboard/cityview/" element={<Navigate to="/dashboard/cityview" replace />} />
-          <Route path="/dashboard/cityview" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Navigate to="/hub" replace />} />
+          <Route path="/dashboard/robot" element={<RoboticsVisualizationPage />} />
+          <Route path="/dashboard/drone" element={<DroneVisualizationPage />} />
+          <Route path="/dashboard/city" element={<CityMapPage />} />
+          <Route path="/dashboard/mission" element={<MissionControlPage />} />
+          <Route path="/dashboard/individualization" element={<IndividualizationPage />} />
+          <Route path="/dashboard/robotics" element={<Navigate to="/dashboard/robot" replace />} />
+          <Route path="/dashboard/city-view" element={<Navigate to="/dashboard/city" replace />} />
+          <Route path="/dashboard/cityview" element={<Navigate to="/dashboard/city" replace />} />
+          <Route path="/dashboard/cityview/" element={<Navigate to="/dashboard/city" replace />} />
           <Route path="/visualization" element={<Visualization />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

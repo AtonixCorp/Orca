@@ -23,6 +23,52 @@ from app.services.realtime_bus import realtime_bus_service
 
 router = APIRouter()
 
+VALID_CHANNELS = {"global", "drone", "robot", "city", "mission", "individualization"}
+
+
+def _normalize_channel(raw_channel: str | None) -> str:
+    channel = (raw_channel or "global").strip().lower()
+    if channel not in VALID_CHANNELS:
+        return "global"
+    return channel
+
+
+def _resolve_raw_token(websocket: WebSocket, token: str | None) -> str | None:
+    if token is not None:
+        return token
+
+    authorization = websocket.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1]
+    return None
+
+
+async def _stream_snapshot_loop(websocket: WebSocket, channel: str, token: str | None) -> None:
+    settings = get_settings()
+
+    raw_token = _resolve_raw_token(websocket, token)
+    auth_required = settings.is_production
+
+    if auth_required and raw_token is None:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if raw_token is not None:
+        try:
+            decode_token(raw_token)
+        except Exception:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
+    await websocket.accept()
+
+    try:
+        while True:
+            await websocket.send_json(await realtime_bus_service.snapshot(channel=channel))
+            await asyncio.sleep(settings.realtime_snapshot_interval_seconds)
+    except WebSocketDisconnect:
+        return
+
 
 @router.get(
     "/live",
@@ -58,29 +104,18 @@ async def alerts(limit: int = Query(25, ge=1, le=100)) -> list[AlertEvent]:
 
 
 @router.websocket("/stream")
-async def stream_events(websocket: WebSocket, token: str | None = Query(default=None)) -> None:
-    raw_token = token
-    if raw_token is None:
-        authorization = websocket.headers.get("authorization", "")
-        if authorization.lower().startswith("bearer "):
-            raw_token = authorization.split(" ", 1)[1]
+async def stream_events(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),
+    channel: str | None = Query(default="global"),
+) -> None:
+    await _stream_snapshot_loop(websocket, _normalize_channel(channel), token)
 
-    if raw_token is None:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
 
-    try:
-        decode_token(raw_token)
-    except Exception:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    await websocket.accept()
-    settings = get_settings()
-
-    try:
-        while True:
-            await websocket.send_json(await realtime_bus_service.snapshot())
-            await asyncio.sleep(settings.realtime_snapshot_interval_seconds)
-    except WebSocketDisconnect:
-        return
+@router.websocket("/stream/{channel}")
+async def stream_events_by_channel(
+    websocket: WebSocket,
+    channel: str,
+    token: str | None = Query(default=None),
+) -> None:
+    await _stream_snapshot_loop(websocket, _normalize_channel(channel), token)
