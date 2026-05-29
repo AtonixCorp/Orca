@@ -1,8 +1,8 @@
-# Surveillance System - ORCA / SmartCito Robotics Platform
+# Surveillance System - ORCA / Orca Robotics Platform
 
 ## 1. System Overview
 
-The SmartCito Surveillance System is a multi-layered autonomous monitoring platform that integrates:
+The Orca Surveillance System is a multi-layered autonomous monitoring platform that integrates:
 
 - Ground robots
 - Aerial drones
@@ -134,7 +134,7 @@ Why this matters:
 
 The robot becomes capable of following intruders, tracking drones, and coordinating with aerial units.
 
-## 8. Cloud Integration (SmartCito Command Center)
+## 8. Cloud Integration (Orca Command Center)
 
 The surveillance system connects to cloud infrastructure:
 

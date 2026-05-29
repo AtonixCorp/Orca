@@ -47,7 +47,7 @@ def build_robot_ai_model() -> dict[str, object]:
     ros2 = build_ros2_robot_contract()
 
     return {
-        "model_name": "SmartCito Robot AI",
+        "model_name": "Orca Robot AI",
         "purpose": "Fuse robot physics, sensors, perception, navigation, cloud, and ROS2 into one operational model.",
         "inputs": {
             "physics": physics,

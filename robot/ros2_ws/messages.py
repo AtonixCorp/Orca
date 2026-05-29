@@ -1,4 +1,4 @@
-"""ROS2/PX4 message contracts for the SmartCito robot stack."""
+"""ROS2/PX4 message contracts for the Orca robot stack."""
 
 from __future__ import annotations
 

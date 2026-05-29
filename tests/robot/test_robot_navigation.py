@@ -69,4 +69,4 @@ def test_robot_cloud_and_ai_contracts() -> None:
 
 
 def test_robot_fastapi_app_exists() -> None:
-    assert app.title == "SmartCito Robot Stack"
+    assert app.title == "Orca Robot Stack"

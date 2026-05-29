@@ -1,6 +1,6 @@
-PASS|smartcito-map|map/Dockerfile|map
-PASS|smartcito-camera-module|camera_module/Dockerfile|.
-PASS|smartcito-gps-module|gps_module/Dockerfile|.
-PASS|smartcito-hardware-domain|hardware/Dockerfile|.
-PASS|smartcito-usb-module|hardware/usb_module/Dockerfile|.
-FAIL|smartcito-ai-models|ai/ai_models/Dockerfile|.
+PASS|orca-map|map/Dockerfile|map
+PASS|orca-camera-module|camera_module/Dockerfile|.
+PASS|orca-gps-module|gps_module/Dockerfile|.
+PASS|orca-hardware-domain|hardware/Dockerfile|.
+PASS|orca-usb-module|hardware/usb_module/Dockerfile|.
+FAIL|orca-ai-models|ai/ai_models/Dockerfile|.

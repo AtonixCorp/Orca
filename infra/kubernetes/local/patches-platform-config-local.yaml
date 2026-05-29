@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: smartcito-platform-config
+  name: orca-platform-config
   namespace: backend
 data:
   HDFS_ENABLED: "false"

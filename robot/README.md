@@ -1,6 +1,6 @@
-# SmartCito Robot Stack
+# Orca Robot Stack
 
-This package implements a modular robot intelligence stack for SmartCito.
+This package implements a modular robot intelligence stack for Orca.
 It is organized around physics, sensors, perception, navigation, AI, cloud,
 and ROS2 integration.
 

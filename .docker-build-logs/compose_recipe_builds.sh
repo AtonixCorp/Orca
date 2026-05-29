@@ -25,6 +25,6 @@ build_and_tag() {
   fi
 }
 
-build_and_tag 'smartcito/frontend-service:local' './webapp' 'Dockerfile' 'smartcito/frontend-service:hardware'
-build_and_tag 'smartcito/drone-gateway:local' '.' 'surveillance/Dockerfile' 'smartcito/sensor-gateway:local' 'smartcito/drone-camera-ingestion:local' 'smartcito/threat-detection:local' 'smartcito/mapping-geospatial:local' 'smartcito/mission-control:local'
-build_and_tag 'smartcito/ingestion-spark:local' '.' 'ingestion/Dockerfile.spark'
+build_and_tag 'orca/frontend-service:local' './webapp' 'Dockerfile' 'orca/frontend-service:hardware'
+build_and_tag 'orca/drone-gateway:local' '.' 'surveillance/Dockerfile' 'orca/sensor-gateway:local' 'orca/drone-camera-ingestion:local' 'orca/threat-detection:local' 'orca/mapping-geospatial:local' 'orca/mission-control:local'
+build_and_tag 'orca/ingestion-spark:local' '.' 'ingestion/Dockerfile.spark'

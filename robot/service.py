@@ -1,4 +1,4 @@
-"""FastAPI service for SmartCito robot contracts and physics summaries."""
+"""FastAPI service for Orca robot contracts and physics summaries."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from robot.ros2_ws.contract import build_ros2_robot_contract
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
-app = FastAPI(title="SmartCito Robot Stack")
+app = FastAPI(title="Orca Robot Stack")
 
 
 @app.get("/health")

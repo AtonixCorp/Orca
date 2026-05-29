@@ -3,14 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 K8S_DIR="$ROOT_DIR/infra/kubernetes"
-KIND_NAME="${KIND_NAME:-smartcito}"
+KIND_NAME="${KIND_NAME:-orca}"
 KIND_VERSION="${KIND_VERSION:-v0.23.0}"
 KIND_BIN="${KIND_BIN:-$ROOT_DIR/.bin/kind}"
 KIND_GATEWAY_PORT="${KIND_GATEWAY_PORT:-18088}"
 CNPG_OPERATOR_MANIFEST_URL="${CNPG_OPERATOR_MANIFEST_URL:-https://raw.githubusercontent.com/cloudnative-pg/artifacts/release-1.29/manifests/operator-manifest.yaml}"
 
 log() {
-  printf '[smartcito-k8s] %s\n' "$*"
+  printf '[orca-k8s] %s\n' "$*"
 }
 
 require_command() {
@@ -62,7 +62,7 @@ preload_local_images() {
     return
   fi
 
-  log "Loading ${#images[@]} local SmartCito images into kind"
+  log "Loading ${#images[@]} local Orca images into kind"
   "$KIND_CMD" load docker-image --name "$KIND_NAME" "${images[@]}"
 }
 
@@ -117,7 +117,7 @@ nodes:
 - role: control-plane
   extraMounts:
   - hostPath: ${ROOT_DIR}
-    containerPath: /workspace/smartcito
+    containerPath: /workspace/orca
   extraPortMappings:
   - containerPort: 30081
     hostPort: ${KIND_GATEWAY_PORT}
@@ -149,7 +149,7 @@ main() {
   install_cnpg_operator
   migrate_local_database
 
-  log "Applying local SmartCito overlay"
+  log "Applying local Orca overlay"
   kubectl kustomize --load-restrictor LoadRestrictionsNone "$K8S_DIR/local" | kubectl apply -f -
 
   log "Waiting for core workloads"

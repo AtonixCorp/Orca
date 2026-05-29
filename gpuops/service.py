@@ -13,7 +13,7 @@ from gpuops.intelligence.robotics import altitude_hold_pitch_command, batch_pitc
 from gpuops.intelligence.solvers import batch_pairwise_distance, interception_vector, predict_constant_velocity, required_intercept_speed, shortest_path_scores
 from gpuops.intelligence.utils import cv2_frame_to_jax, jax_to_torch_dlpack, px4_setpoint_from_control, ros2_command_from_control, torch_to_jax_dlpack
 
-app = FastAPI(title="SmartCito GPUOPS")
+app = FastAPI(title="Orca GPUOPS")
 
 
 @app.get("/health")

@@ -104,7 +104,7 @@ static PyObject *orca_parse_frame(PyObject *self, PyObject *args) {
 
 /* ---- Module boilerplate ------------------------------------------------- */
 
-static PyMethodDef SmartcitoMethods[] = {
+static PyMethodDef OrcaMethods[] = {
     {"parse_frame", orca_parse_frame, METH_VARARGS,
      "Parse a 17-byte Orca binary sensor frame into a dict."},
     {NULL, NULL, 0, NULL}
@@ -115,7 +115,7 @@ static struct PyModuleDef orca_module = {
     "orca_fast",
     "Orca C accelerators (binary frame parser).",
     -1,
-    SmartcitoMethods,
+    OrcaMethods,
     NULL, NULL, NULL, NULL
 };
 

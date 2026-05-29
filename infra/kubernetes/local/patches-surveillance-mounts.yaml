@@ -12,13 +12,13 @@ spec:
             - name: PYTHONPATH
               value: /app
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
 ---
 apiVersion: apps/v1
@@ -35,13 +35,13 @@ spec:
             - name: PYTHONPATH
               value: /app
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
 ---
 apiVersion: apps/v1
@@ -58,13 +58,13 @@ spec:
             - name: PYTHONPATH
               value: /app
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
 ---
 apiVersion: apps/v1
@@ -83,13 +83,13 @@ spec:
             - name: DRONE_GATEWAY_URL
               value: http://drone-gateway.backend.svc.cluster.local:8020
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
 ---
 apiVersion: apps/v1
@@ -106,13 +106,13 @@ spec:
             - name: PYTHONPATH
               value: /app
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
 ---
 apiVersion: apps/v1
@@ -129,11 +129,11 @@ spec:
             - name: PYTHONPATH
               value: /app
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory

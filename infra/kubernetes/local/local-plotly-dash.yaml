@@ -20,7 +20,7 @@ spec:
           command: ["python", "-m", "app.dash_app.server"]
           envFrom:
             - configMapRef:
-                name: smartcito-platform-config
+                name: orca-platform-config
           env:
             - name: PYTHONPATH
               value: /app
@@ -29,10 +29,10 @@ spec:
           ports:
             - containerPort: 8050
           volumeMounts:
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
-            - name: smartcito-hardware
+            - name: orca-hardware
               mountPath: /app/hardware
               readOnly: true
           readinessProbe:
@@ -44,13 +44,13 @@ spec:
               path: /metrics
               port: 8050
       volumes:
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
-        - name: smartcito-hardware
+        - name: orca-hardware
           hostPath:
-            path: /workspace/smartcito/hardware
+            path: /workspace/orca/hardware
             type: Directory
 ---
 apiVersion: v1

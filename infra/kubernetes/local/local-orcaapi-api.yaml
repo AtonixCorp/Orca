@@ -22,21 +22,21 @@ spec:
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: smartcito-platform-config
+                name: orca-platform-config
             - secretRef:
-                name: smartcito-platform-secrets
+                name: orca-platform-secrets
           env:
             - name: PYTHONPATH
               value: /app
           ports:
             - containerPort: 8000
           volumeMounts:
-            - name: smartcito-data
+            - name: orca-data
               mountPath: /app/data
-            - name: smartcito-shared
-              mountPath: /app/smartcito_shared
+            - name: orca-shared
+              mountPath: /app/orca_shared
               readOnly: true
-            - name: smartcito-hardware
+            - name: orca-hardware
               mountPath: /app/hardware
               readOnly: true
             - name: ingestion-config
@@ -51,21 +51,21 @@ spec:
               path: /api/v1/health/live
               port: 8000
       volumes:
-        - name: smartcito-data
+        - name: orca-data
           hostPath:
-            path: /workspace/smartcito/data
+            path: /workspace/orca/data
             type: Directory
-        - name: smartcito-shared
+        - name: orca-shared
           hostPath:
-            path: /workspace/smartcito/smartcito_shared
+            path: /workspace/orca/orca_shared
             type: Directory
-        - name: smartcito-hardware
+        - name: orca-hardware
           hostPath:
-            path: /workspace/smartcito/hardware
+            path: /workspace/orca/hardware
             type: Directory
         - name: ingestion-config
           hostPath:
-            path: /workspace/smartcito/ingestion/config
+            path: /workspace/orca/ingestion/config
             type: Directory
 ---
 apiVersion: v1

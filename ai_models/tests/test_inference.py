@@ -243,7 +243,7 @@ def test_robot_model_endpoint_returns_robot_ai_contract() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["model_name"] == "SmartCito Robot AI"
+    assert payload["model_name"] == "Orca Robot AI"
     assert "physics" in payload["inputs"]
     assert "ros2" in payload["inputs"]
 
@@ -272,4 +272,4 @@ def test_robot_control_endpoint_builds_px4_command() -> None:
     assert payload["telemetry"]["robot_id"] == "robot-alpha"
     assert payload["command"]["px4_mode"] == "AUTO"
     assert payload["command"]["ros2_action"] == "publish_navigation_command"
-    assert payload["command"]["source_model"] == "SmartCito Robot AI"
+    assert payload["command"]["source_model"] == "Orca Robot AI"

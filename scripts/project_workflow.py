@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified workflow runner for SmartCito/Orca.
+"""Unified workflow runner for Orca/Orca.
 
 This script provides one place to run the project workflow end-to-end:
 - preflight checks
@@ -305,7 +305,7 @@ def run_full(*, mode: str, compose_file: str, build: bool, keep_running: bool) -
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="SmartCito unified workflow runner")
+    parser = argparse.ArgumentParser(description="Orca unified workflow runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("preflight", help="Run prerequisite checks")

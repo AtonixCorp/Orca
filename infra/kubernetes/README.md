@@ -57,9 +57,9 @@ bash infra/kubernetes/init-local-kind.sh
 ```
 
 This creates or reuses a local `kind` cluster, mounts the repo into the node at
-`/workspace/smartcito`, then renders `infra/kubernetes/local` with
+`/workspace/orca`, then renders `infra/kubernetes/local` with
 `kubectl kustomize --load-restrictor LoadRestrictionsNone` before applying it.
-If the SmartCito images already exist in the local Docker daemon, the script
+If the Orca images already exist in the local Docker daemon, the script
 loads them into `kind` first to avoid waiting on registry pulls.
 
 The visualization gateway is exposed locally at `http://127.0.0.1:18088` by
@@ -68,10 +68,10 @@ default. Override it with `KIND_GATEWAY_PORT` if needed.
 ## Docker Environment
 
 To prepare the Docker environment, pull the declared images, start the compose
-stack, and verify the core SmartCito services, run:
+stack, and verify the core Orca services, run:
 
 ```bash
-bash scripts/start-smartcito-environment.sh
+bash scripts/start-orca-environment.sh
 ```
 
 Use the OpenStack cloud controller manager and Cinder CSI driver so

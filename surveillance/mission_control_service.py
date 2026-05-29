@@ -376,7 +376,7 @@ def _build_reactive_city_mission(request_payload: SurveillanceDispatchRequest) -
 
     mission = CityMission(
         name=f"Reactive surveillance dispatch ({request_payload.threat_level.lower()})",
-        city="SmartCito",
+        city="Orca",
         district=request_payload.environment,
         radius_km=3,
         assignments=assignments,

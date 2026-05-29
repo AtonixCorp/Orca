@@ -185,6 +185,33 @@ Example commands:
 ./orca dataset export --batch-dir ai/orca_datasets --output-path exports/orca_external.json
 ```
 
+## Docker (Single AI Workspace Image)
+
+The `ai/` directory now includes a root `Dockerfile` so you can build one
+image for the whole AI workspace instead of only `ai/ai_models/`.
+
+Build from `Orca/ai`:
+
+```bash
+docker build -t atonixdev/orca-ai-workspace:1.0.0 .
+```
+
+Run inference API (default entrypoint):
+
+```bash
+docker run --rm -p 8012:8012 atonixdev/orca-ai-workspace:1.0.0
+```
+
+Run training or ingestion commands with an overridden entrypoint:
+
+```bash
+docker run --rm --entrypoint python atonixdev/orca-ai-workspace:1.0.0 ai/training/train.py --dataset-dir ai/datasets --models-dir ai/models
+```
+
+```bash
+docker run --rm --entrypoint python atonixdev/orca-ai-workspace:1.0.0 ai/ingestion/space_weather_ingestor.py
+```
+
 ## Kaggle Assets
 
 This bundle includes the primary public AI deliverables:

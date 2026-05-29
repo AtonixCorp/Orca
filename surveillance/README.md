@@ -6,7 +6,7 @@ Drones and sensors are not baked into the Orca OS image. They run as services on
 
 ## Surveillance Architecture (Sees, Thinks, Reacts)
 
-For the complete SmartCito surveillance architecture reference, including perception, intelligence, autonomy, sensor fusion, threat classification, tracking/interception, cloud integration, security, and end-to-end workflow, see:
+For the complete Orca surveillance architecture reference, including perception, intelligence, autonomy, sensor fusion, threat classification, tracking/interception, cloud integration, security, and end-to-end workflow, see:
 
 - `docs/SURVEILLANCE_SYSTEM.md`
 

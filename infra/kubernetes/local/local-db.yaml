@@ -5,7 +5,7 @@ metadata:
   namespace: database
 type: kubernetes.io/basic-auth
 stringData:
-  username: smartcito
+  username: orca
   password: change-me
 ---
 apiVersion: v1
@@ -31,8 +31,8 @@ spec:
     size: 5Gi
   bootstrap:
     initdb:
-      database: smartcito
-      owner: smartcito
+      database: orca
+      owner: orca
       secret:
         name: postgres-app
   superuserSecret:

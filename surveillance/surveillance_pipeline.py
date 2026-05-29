@@ -2,7 +2,7 @@
 ================================================================================
  File: surveillance/surveillance_pipeline.py
  Purpose:
-   Executable 10-layer surveillance pipeline for ORCA/SmartCito robotics.
+   Executable 10-layer surveillance pipeline for ORCA/Orca robotics.
 ================================================================================
 """
 

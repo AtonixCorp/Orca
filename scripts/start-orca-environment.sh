@@ -5,11 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$ROOT_DIR/docker-compose.yml}"
 
 log() {
-  printf '[smartcito-docker] %s\n' "$*"
+  printf '[orca-docker] %s\n' "$*"
 }
 
 fail() {
-  printf '[smartcito-docker] %s\n' "$*" >&2
+  printf '[orca-docker] %s\n' "$*" >&2
   exit 1
 }
 
@@ -136,7 +136,7 @@ main() {
   log "Pulling compose images"
   compose pull
 
-  log "Starting SmartCito compose stack"
+  log "Starting Orca compose stack"
   compose up -d
 
   log "Verifying core image tags"
