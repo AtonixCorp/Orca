@@ -62,25 +62,6 @@ export default function CommandOpsLayout({
 
   return (
     <section className="ops-shell" aria-label="Orca operations command center">
-      <aside className="ops-sidebar">
-        <div className="ops-brand">
-          <span>ORCA COMMAND</span>
-          <strong>Robotics Control</strong>
-        </div>
-
-        <nav className="ops-nav" aria-label="Operations pages">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`ops-nav-link ${location.pathname === item.to ? "is-active" : ""}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
       <div className="ops-main-column">
         <header className="ops-topbar">
           <div className="ops-topbar-meta">
