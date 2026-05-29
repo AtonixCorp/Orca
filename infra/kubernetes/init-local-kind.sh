@@ -56,7 +56,7 @@ preload_local_images() {
   local images=()
   while IFS= read -r image; do
     images+=("$image")
-  done < <(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^atonixdev/' | sort -u || true)
+  done < <(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^atonixdev/orca-' | sort -u || true)
 
   if [[ ${#images[@]} -eq 0 ]]; then
     return

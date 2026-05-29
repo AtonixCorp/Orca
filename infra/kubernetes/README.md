@@ -43,7 +43,7 @@ kubectl apply -f infra/kubernetes/
 For local development, use the kind bootstrap script instead of the OpenStack
 path above. The local overlay swaps cloud-only storage and load balancers for
 single-node development equivalents and mounts the shared repo directories that
-the current `atonixdev/*:1.0.0` images still expect at runtime.
+the current `atonixdev/orca-*:1.0.0` images still expect at runtime.
 
 The local database path uses the CloudNativePG operator and applies the official
 release `1.29` manifest with:
