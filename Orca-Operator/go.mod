@@ -1,4 +1,4 @@
-module github.com/example/Orca-operator
+module github.com/AtonixCorp/Orca/Orca-Operator
 
 go 1.20
 

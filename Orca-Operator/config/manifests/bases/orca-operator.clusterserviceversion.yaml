@@ -13,7 +13,7 @@ spec:
     - description: Orca is the Schema for the orcas API
       displayName: Orca
       kind: Orca
-      name: orcas.cache.example.com
+      name: orcas.orca.atonix.dev
       version: v1alpha1
   description: Orca-Operator manages ORCA platform resources on Kubernetes, automating
     deployment, configuration, and lifecycle operations for Orca services.
@@ -45,8 +45,9 @@ spec:
   - orchestration
   links:
   - name: Orca Operator
-    url: https://orca-operator.domain
+    url: https://github.com/AtonixCorp/Orca/tree/main/Orca-Operator
   maturity: alpha
+  minKubeVersion: 1.28.0
   provider:
-    name: orca-operator
+    name: AtonixCorp
   version: 0.0.0

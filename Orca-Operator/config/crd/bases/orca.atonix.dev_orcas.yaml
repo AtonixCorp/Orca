@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.3
-  name: orcas.cache.example.com
+  name: orcas.orca.atonix.dev
 spec:
-  group: cache.example.com
+  group: orca.atonix.dev
   names:
     kind: Orca
     listKind: OrcaList

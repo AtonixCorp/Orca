@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cachev1alpha1 "github.com/example/Orca-operator/api/v1alpha1"
+	orcav1alpha1 "github.com/AtonixCorp/Orca/Orca-Operator/api/v1alpha1"
 )
 
 // OrcaReconciler reconciles a Orca object
@@ -39,9 +39,9 @@ type OrcaReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=cache.example.com,resources=orcas,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.example.com,resources=orcas/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.example.com,resources=orcas/finalizers,verbs=update
+//+kubebuilder:rbac:groups=orca.atonix.dev,resources=orcas,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=orca.atonix.dev,resources=orcas/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=orca.atonix.dev,resources=orcas/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -56,7 +56,7 @@ type OrcaReconciler struct {
 func (r *OrcaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	orca := &cachev1alpha1.Orca{}
+	orca := &orcav1alpha1.Orca{}
 	if err := r.Get(ctx, req.NamespacedName, orca); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -118,7 +118,7 @@ func (r *OrcaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *OrcaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cachev1alpha1.Orca{}).
+		For(&orcav1alpha1.Orca{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }

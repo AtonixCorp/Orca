@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "cache.example.com/v1alpha1",
+          "apiVersion": "orca.atonix.dev/v1alpha1",
           "kind": "Orca",
           "metadata": {
             "labels": {
@@ -24,7 +24,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2026-05-30T14:31:42Z"
+    createdAt: "2026-05-30T14:44:55Z"
     operators.operatorframework.io/builder: operator-sdk-v1.34.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: orca-operator.v0.0.2
@@ -36,7 +36,7 @@ spec:
     - description: Orca is the Schema for the orcas API
       displayName: Orca
       kind: Orca
-      name: orcas.cache.example.com
+      name: orcas.orca.atonix.dev
       version: v1alpha1
   description: Orca-Operator manages ORCA platform resources on Kubernetes, automating
     deployment, configuration, and lifecycle operations for Orca services.
@@ -61,7 +61,7 @@ spec:
           - update
           - watch
         - apiGroups:
-          - cache.example.com
+          - orca.atonix.dev
           resources:
           - orcas
           verbs:
@@ -73,13 +73,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - cache.example.com
+          - orca.atonix.dev
           resources:
           - orcas/finalizers
           verbs:
           - update
         - apiGroups:
-          - cache.example.com
+          - orca.atonix.dev
           resources:
           - orcas/status
           verbs:
@@ -237,8 +237,9 @@ spec:
   - orchestration
   links:
   - name: Orca Operator
-    url: https://orca-operator.domain
+    url: https://github.com/AtonixCorp/Orca/tree/main/Orca-Operator
   maturity: alpha
+  minKubeVersion: 1.28.0
   provider:
-    name: orca-operator
+    name: AtonixCorp
   version: 0.0.2

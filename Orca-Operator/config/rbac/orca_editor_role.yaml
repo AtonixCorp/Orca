@@ -12,7 +12,7 @@ metadata:
   name: orca-editor-role
 rules:
 - apiGroups:
-  - cache.example.com
+  - orca.atonix.dev
   resources:
   - orcas
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.example.com
+  - orca.atonix.dev
   resources:
   - orcas/status
   verbs:
