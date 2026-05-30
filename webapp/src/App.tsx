@@ -53,7 +53,7 @@ export default function App() {
         <small>
           Orca · Local-first device operations · Apache 2.0 ·{" "}
           <a
-            href="https://github.com/atonixdev/orca"
+            href="https://github.com/AtonixCorp/Orca"
             target="_blank"
             rel="noreferrer"
           >

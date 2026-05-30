@@ -63,7 +63,7 @@ export default function Community() {
           </p>
           <a
             className="text-link"
-            href="https://github.com/atonixdev/orca"
+            href="https://github.com/AtonixCorp/Orca"
             target="_blank"
             rel="noreferrer"
           >

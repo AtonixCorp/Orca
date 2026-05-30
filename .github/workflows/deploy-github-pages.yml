@@ -32,7 +32,7 @@ jobs:
         working-directory: webapp
         run: npm ci --no-audit --no-fund
 
-      - name: Build dashboard
+      - name: Build webapp
         working-directory: webapp
         env:
           GITHUB_PAGES: "true"
