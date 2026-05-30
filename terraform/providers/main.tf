@@ -3,8 +3,6 @@ locals {
     for name, config in var.openstack_compute : name => config
     if var.openstack_enabled && config.enabled
   }
-
-  namespace_set = distinct(concat(var.namespaces, [var.orca_namespace]))
 }
 
 module "openstack_network" {
@@ -39,29 +37,4 @@ module "openstack_compute" {
   availability_zone = each.value.availability_zone
   user_data         = each.value.user_data
   network_id        = each.value.network_id != "" ? each.value.network_id : module.openstack_network.network_id
-}
-
-module "k8s_namespaces" {
-  source = "../modules/k8s-namespaces"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  enabled    = var.kubernetes_enabled
-  namespaces = local.namespace_set
-}
-
-module "k8s_services" {
-  source = "../modules/k8s-services"
-
-  providers = {
-    kubernetes = kubernetes
-  }
-
-  enabled   = var.kubernetes_enabled
-  namespace = var.orca_namespace
-  workloads = var.orca_workloads
-
-  depends_on = [module.k8s_namespaces]
 }

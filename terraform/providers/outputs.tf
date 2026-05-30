@@ -16,13 +16,3 @@ output "openstack_compute" {
     }
   }
 }
-
-output "kubernetes_namespaces" {
-  description = "Namespaces created or managed in Kubernetes."
-  value       = module.k8s_namespaces.namespaces
-}
-
-output "orca_workloads" {
-  description = "Deployed ORCA workload services and deployment names."
-  value       = module.k8s_services.workloads
-}
