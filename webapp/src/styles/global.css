@@ -7,6 +7,10 @@
    ============================================================================ */
 
 :root {
+  --orca-black: #000000;
+  --orca-ocean-blue: #003b73;
+  --orca-electric-cyan: #00e5ff;
+  --orca-white: #ffffff;
   --bg: #08141f;
   --bg-elev: #122236;
   --bg-soft: #102b33;
@@ -76,11 +80,36 @@ code {
   top: 0;
   z-index: 20;
 }
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+.brand-mark {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  color: var(--orca-electric-cyan);
+  filter: drop-shadow(0 10px 18px rgba(0, 229, 255, 0.16));
+}
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .app-title {
   color: #f7fbfc;
   margin: 0;
   font-size: 1.25rem;
   letter-spacing: 0.02em;
+}
+.app-title-sub {
+  color: var(--fg-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 .app-nav {
   display: flex;
@@ -254,6 +283,18 @@ code {
   overflow: hidden;
   padding: 4rem max(2rem, calc((100vw - 1200px) / 2));
   position: relative;
+}
+.hero-brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.hero-mark {
+  width: 68px;
+  height: 68px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 12px 24px rgba(0, 229, 255, 0.18));
 }
 
 .landing-hero::before {

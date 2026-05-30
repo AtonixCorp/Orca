@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
 
 from app.db.session import AsyncSessionLocal
 from app.schemas.gps import GPSPointIn

@@ -58,6 +58,8 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: Security policy tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest ../tests/security -v
 
   security-webapp:

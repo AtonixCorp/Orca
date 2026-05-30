@@ -9,6 +9,8 @@
 
 import { Link } from "react-router-dom";
 
+import OrcaLogo from "../components/OrcaLogo";
+
 const coreFeatures = [
   {
     title: "Local CLI",
@@ -61,10 +63,10 @@ export default function Home() {
     <div className="home-page">
       <section className="landing-hero">
         <div className="hero-copy">
-          <span className="eyebrow">Open smart city infrastructure</span>
-          <span className="eyebrow">
-            Frontend marker: React site from webapp/src/pages/Home.tsx
-          </span>
+          <div className="hero-brand-row">
+            <OrcaLogo className="hero-mark" title="ORCA platform mark" />
+            <span className="eyebrow">Open smart city infrastructure</span>
+          </div>
           <h2>Orca</h2>
           <p>
             Orca is a local-first robotics and device operations platform. It
