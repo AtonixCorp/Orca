@@ -10,6 +10,7 @@ Why this path is used:
 
 Deliverables included here:
 
+- `orcalogo.svg` — exact homepage branding mark
 - `orca-catfish-auto.svg`
 - `orca-catfish-dark.svg`
 - `orca-catfish-light.svg`
@@ -24,6 +25,7 @@ Deliverables included here:
 
 PNG exports:
 
+- `orcalogo.png`
 - `png/orca-catfish-auto-{256,512,1024,2048}.png`
 - `png/orca-catfish-dark-{256,512,1024,2048}.png`
 - `png/orca-catfish-light-{256,512,1024,2048}.png`
@@ -34,6 +36,7 @@ PNG exports:
 
 Recommended brand usage:
 
+- `orcalogo.svg` or `orcalogo.png` for the exact homepage brand mark
 - `orca-catfish-auto.svg` or `png/orca-catfish-auto-2048.png` for the primary brand mark
 - `orca-catfish-dark.svg` or `png/orca-catfish-dark-2048.png` for dark presentation surfaces
 - `orca-catfish-light.svg` or `png/orca-catfish-light-2048.png` for light presentation surfaces
