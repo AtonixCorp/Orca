@@ -20,8 +20,10 @@ from redis.asyncio import Redis
 
 from app import __version__
 from app.core.config import get_settings
+from app.core.security import get_local_process_identity
 from app.db.session import AsyncSessionLocal
 from app.services.cache import cache_service
+from orca_shared.identity import identity_posture
 
 router = APIRouter()
 
@@ -45,6 +47,18 @@ class StatusResponse(BaseModel):
     service: str = "orca-api"
     version: str = __version__
     dependencies: list[DependencyStatus]
+
+
+class IdentityStatusResponse(BaseModel):
+    service: str = "orca-api"
+    version: str = __version__
+    upi: str
+    component_type: str
+    role: str
+    api_role: str
+    ldap_dn: str
+    permissions: list[str]
+    registered_at: str
 
 
 async def _check_database(session: AsyncSession) -> DependencyStatus:
@@ -156,3 +170,14 @@ async def service_status() -> StatusResponse:
     critical = {"postgres", "redis", "kafka", "realtime-configured"}
     ready = all(item.ok for item in dependencies if item.name in critical)
     return StatusResponse(status="ready" if ready else "degraded", dependencies=dependencies)
+
+
+@router.get(
+    "/identity",
+    response_model=IdentityStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Current process identity posture",
+)
+async def identity_status() -> IdentityStatusResponse:
+    posture = identity_posture(get_local_process_identity())
+    return IdentityStatusResponse(**posture)

@@ -11,7 +11,8 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-services = ["fastapi", "pydantic", "python-dotenv"]
+services = ["fastapi", "pydantic", "python-dotenv", "ldap3", "py-fortress"]
+identity = ["ldap3", "py-fortress"]
 
 [project.scripts]
 orca = "orca_cli.main:main"
@@ -37,6 +38,7 @@ include = [
     "gpuops*",
     "services*",
     "security*",
+    "orca_shared*",
     "orca_cli*",
     "orca_sdk*",
 ]

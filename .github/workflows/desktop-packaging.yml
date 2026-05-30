@@ -1,0 +1,143 @@
+name: Desktop Packaging
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing tag to publish to GitHub Releases. Leave empty for artifact-only runs.
+        required: false
+        type: string
+      release_name:
+        description: Optional release title override.
+        required: false
+        type: string
+      prerelease:
+        description: Mark the published GitHub Release as a prerelease.
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-packaging-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality-gate:
+    name: Reuse CI checks
+    uses: ./.github/workflows/ci.yml
+
+  package-desktop:
+    name: Package desktop (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    needs: quality-gate
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+            script: npm run desktop:dist:win
+            artifact_name: orca-desktop-windows
+            artifact_path: webapp/desktop-release/**
+          - os: macos-latest
+            label: macos
+            script: npm run desktop:dist:mac
+            artifact_name: orca-desktop-macos
+            artifact_path: webapp/desktop-release/**
+
+    defaults:
+      run:
+        working-directory: webapp
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install webapp dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate desktop image assets
+        run: npm run desktop:brand
+
+      - name: Generate macOS icns
+        if: runner.os == 'macOS'
+        run: npm run desktop:brand:mac
+
+      - name: Prepare macOS signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          if [[ -z "$MACOS_CERTIFICATE_P12" ]]; then
+            echo "macOS signing certificate not configured; continuing without codesign certificate setup."
+            exit 0
+          fi
+          CERT_PATH="$RUNNER_TEMP/orca-macos-signing.p12"
+          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          echo "CSC_LINK=$CERT_PATH" >> "$GITHUB_ENV"
+          echo "CSC_KEY_PASSWORD=$MACOS_CERTIFICATE_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Prepare Windows signing certificate
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if [[ -z "$WINDOWS_CERTIFICATE_P12" ]]; then
+            echo "Windows signing certificate not configured; continuing without Authenticode certificate setup."
+            exit 0
+          fi
+          CERT_PATH="$RUNNER_TEMP/orca-windows-signing.p12"
+          printf '%s' "$WINDOWS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          echo "CSC_LINK=$CERT_PATH" >> "$GITHUB_ENV"
+          echo "CSC_KEY_PASSWORD=$WINDOWS_CERTIFICATE_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Package desktop installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ runner.os == 'Windows' && 'false' || 'true' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.script }}
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    name: Publish desktop release
+    runs-on: ubuntu-latest
+    needs: package-desktop
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || github.event.inputs.release_tag != ''
+    steps:
+      - name: Download packaged installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: orca-desktop-*
+          merge-multiple: true
+          path: desktop-release
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag != '' && github.event.inputs.release_tag || github.ref_name }}
+          name: ${{ github.event.inputs.release_name != '' && github.event.inputs.release_name || format('ORCA Operator {0}', github.event.inputs.release_tag != '' && github.event.inputs.release_tag || github.ref_name) }}
+          generate_release_notes: true
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          files: |
+            desktop-release/*.exe
+            desktop-release/*.dmg
+            desktop-release/*.blockmap

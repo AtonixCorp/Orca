@@ -22,6 +22,26 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
+Desktop shell during development:
+
+```bash
+npm run desktop:dev
+```
+
+Desktop artifacts on CI runners:
+
+```bash
+GitHub Actions -> Desktop Packaging -> Run workflow
+```
+
+Desktop branding assets:
+
+- Source mark: `public/assets/logo/orca-catfish-favicon.svg`
+- Generated Windows icon: `electron/assets/icon.ico`
+- Generated macOS icon: `electron/assets/icon.icns`
+- Installer banner assets: `electron/assets/installer-sidebar.bmp` and `electron/assets/installer-header.bmp`
+- DMG background: `electron/assets/dmg-background.png`
+
 The dev server proxies `/api` to `http://localhost:8000`, so start the
 backend API with `uvicorn app.main:app --reload` from [`../orcaapi/`](../orcaapi/)
 in another shell, or use `docker compose up` from the repo root.
@@ -85,3 +105,40 @@ webapp/
 | `npm run preview`| Serve the production build locally       |
 | `npm run lint`   | ESLint (zero warnings tolerated)         |
 | `npm run test`   | Vitest in CI mode                        |
+| `npm run desktop:dev` | Launch Electron against the Vite dev server |
+| `npm run desktop:dist:win` | Build the desktop shell and package a Windows installer |
+| `npm run desktop:dist:mac` | Build the desktop shell and package a macOS DMG |
+
+## Desktop Packaging
+
+The webapp now includes an Electron wrapper for the operator control center.
+
+- Route: `/operator`
+- Dev shell: `npm run desktop:dev`
+- Packaging targets: Windows `nsis` installer (`.exe`) and macOS `dmg`
+- CI packaging workflow: `.github/workflows/desktop-packaging.yml`
+- Release publishing: tagged desktop builds automatically attach `.exe` and `.dmg` assets to GitHub Releases
+
+Platform note:
+
+- Building a signed macOS `.dmg` requires running the packaging step on macOS.
+- Building a Windows installer from Linux may require additional host tooling such as Wine.
+- This repository now provides GitHub-hosted Windows and macOS runners for packaging those installers.
+
+Signing and notarization environment hooks:
+
+- `MACOS_CERTIFICATE_P12`: base64-encoded Developer ID Application certificate
+- `MACOS_CERTIFICATE_PASSWORD`: password for the macOS signing certificate
+- `MAC_CODESIGN_IDENTITY`: Developer ID Application identity string used by codesign
+- `APPLE_ID`: Apple ID email for notarization
+- `APPLE_APP_SPECIFIC_PASSWORD`: app-specific password for notarization
+- `APPLE_TEAM_ID`: Apple developer team identifier
+- `WINDOWS_CERTIFICATE_P12`: base64-encoded Authenticode certificate bundle
+- `WINDOWS_CERTIFICATE_PASSWORD`: password for the Windows signing certificate
+
+Provide those values to the GitHub Actions job environment or to a self-hosted runner environment before packaging if you want signed installers and notarized macOS builds.
+
+Release flow:
+
+- Push a tag matching `desktop-v*` to package installers and publish them to a GitHub Release automatically.
+- For manual runs, supply `release_tag` in the workflow dispatch form if you want the generated installers attached to an existing or new release.

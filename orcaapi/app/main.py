@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from uuid import uuid4
@@ -39,6 +40,7 @@ from prometheus_client import make_asgi_app
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.security import get_local_process_identity
 from app.graphql.schema import graphql_router
 from app.services.gps_mqtt_ingestor import GPSMqttIngestor
 from app.services.gps_udp_ingestor import GPSUDPIngestor
@@ -46,6 +48,7 @@ from app.services.ingestion import ingestion_service
 from app.services.kafka_stream import KafkaPublisher
 from app.services.mqtt_ingestor import MqttIngestor
 from app.schemas.sensor import SensorReadingIn
+from orca_shared.identity import build_audit_event
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +69,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
     logger.info("Starting %s in %s mode", settings.app_name, settings.app_env)
+
+    process_identity = get_local_process_identity()
+    app.state.process_identity = process_identity
+    logger.info(
+        "identity.bootstrapped upi=%s role=%s component_type=%s ldap_dn=%s",
+        process_identity.upi,
+        process_identity.role,
+        process_identity.component_type,
+        process_identity.dn,
+    )
+    if settings.audit_log_enabled:
+        logger.info(
+            "identity.audit %s",
+            json.dumps(
+                build_audit_event(
+                    process_identity.upi,
+                    action="process.bootstrap",
+                    details={
+                        "role": process_identity.role,
+                        "component_type": process_identity.component_type,
+                        "ldap_dn": process_identity.dn,
+                    },
+                ),
+                sort_keys=True,
+            ),
+        )
 
     app.state.kafka = None
     app.state.mqtt_task = None

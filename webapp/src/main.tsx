@@ -9,7 +9,7 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, HashRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "./App";
@@ -28,12 +28,14 @@ if (!rootElement) {
   throw new Error("Fatal: #root element not found in index.html");
 }
 
+const Router = window.orcaDesktop?.isDesktop ? HashRouter : BrowserRouter;
+
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Router basename={import.meta.env.BASE_URL}>
         <App />
-      </BrowserRouter>
+      </Router>
     </QueryClientProvider>
   </React.StrictMode>,
 );

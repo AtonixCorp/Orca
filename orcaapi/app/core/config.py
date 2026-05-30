@@ -154,6 +154,25 @@ class Settings(BaseSettings):
     audit_log_enabled: bool = True
     otel_exporter_otlp_endpoint: str | None = None
 
+    # ----- Process identity / LDAP RBAC -----
+    orca_upi: str | None = Field(default=None, validation_alias=AliasChoices("ORCA_UPI"))
+    orca_component_type: str = Field(
+        default="service",
+        validation_alias=AliasChoices("ORCA_COMPONENT_TYPE"),
+    )
+    orca_identity_role: str = Field(
+        default="orca.admin",
+        validation_alias=AliasChoices("ORCA_IDENTITY_ROLE"),
+    )
+    orca_identity_description: str = Field(
+        default="Orca API local service process",
+        validation_alias=AliasChoices("ORCA_IDENTITY_DESCRIPTION"),
+    )
+    ldap_base_dn: str = Field(
+        default="dc=orca,dc=internal",
+        validation_alias=AliasChoices("ORCA_LDAP_BASE_DN"),
+    )
+
     # ----- AI / object storage -----
     ai_models_url: str = "http://ai-service:8012"
     object_storage_endpoint: str = "file://./data/object_storage"

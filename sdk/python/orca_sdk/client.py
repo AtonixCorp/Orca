@@ -33,6 +33,9 @@ class OrcaClient:
     def health_status(self) -> dict[str, Any]:
         return self._request_json("GET", "/api/v1/health/status")
 
+    def health_identity(self) -> dict[str, Any]:
+        return self._request_json("GET", "/api/v1/health/identity")
+
     def control_plane_overview(self) -> dict[str, Any]:
         return self._request_json("GET", "/api/v1/control-plane/overview")
 

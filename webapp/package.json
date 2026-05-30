@@ -8,6 +8,8 @@
   "private": true,
   "version": "0.1.0",
   "description": "Orca robotics and drone control platform documentation and downloads site.",
+  "author": "AtonixCorp",
+  "homepage": "https://github.com/AtonixCorp/Orca",
   "type": "module",
   "license": "Apache-2.0",
   "scripts": {
@@ -18,7 +20,13 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "desktop:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
+    "desktop:brand": "bash ./scripts/generate-desktop-assets.sh",
+    "desktop:brand:mac": "bash ./scripts/generate-mac-icon.sh",
+    "desktop:dist": "npm run desktop:brand && npm run build && electron-builder",
+    "desktop:dist:win": "npm run desktop:brand && npm run build && electron-builder --win nsis",
+    "desktop:dist:mac": "npm run desktop:brand && npm run desktop:brand:mac && npm run build && electron-builder --mac dmg"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
@@ -32,6 +40,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.0",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@types/leaflet": "^1.9.21",
@@ -42,6 +51,10 @@
     "@typescript-eslint/eslint-plugin": "^8.8.1",
     "@typescript-eslint/parser": "^8.8.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^37.1.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.12.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.12",
@@ -50,6 +63,112 @@
     "typescript": "^5.6.3",
     "vite": "^8.0.14",
     "vite-plugin-cesium": "^1.2.23",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "wait-on": "^8.0.5"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.atonixcorp.orca.desktop",
+    "productName": "ORCA Operator",
+    "copyright": "Copyright © 2026 AtonixCorp",
+    "afterSign": "electron/notarize.cjs",
+    "directories": {
+      "output": "desktop-release",
+      "buildResources": "electron/assets"
+    },
+    "asar": true,
+    "artifactName": "ORCA-Operator-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "scripts/**/*"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "mac": {
+      "icon": "electron/assets/icon.icns",
+      "identity": "${env.MAC_CODESIGN_IDENTITY}",
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true,
+      "artifactName": "ORCA-Operator-${version}-macOS-${arch}.${ext}",
+      "bundleVersion": "${version}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
+      "extendInfo": {
+        "CFBundleName": "ORCA Operator",
+        "CFBundleDisplayName": "ORCA Operator",
+        "CFBundleGetInfoString": "ORCA Operator local-first command station",
+        "NSCameraUsageDescription": "ORCA Operator displays live camera and drone feeds for local mission control.",
+        "NSMicrophoneUsageDescription": "ORCA Operator can monitor operator audio channels when mission consoles enable voice comms.",
+        "NSLocationWhenInUseUsageDescription": "ORCA Operator uses geospatial positioning to display local assets and mission maps."
+      }
+    },
+    "win": {
+      "icon": "electron/assets/icon.ico",
+      "publisherName": "AtonixCorp",
+      "legalTrademarks": "ORCA by AtonixCorp",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "ORCA-Operator-${version}-Windows-${arch}.${ext}",
+      "executableName": "ORCA Operator",
+      "fileDescription": "ORCA Operator desktop control center",
+      "signAndEditExecutable": true,
+      "target": [
+        "nsis"
+      ]
+    },
+    "dmg": {
+      "background": "electron/assets/dmg-background.png",
+      "icon": "electron/assets/icon.icns",
+      "iconSize": 128,
+      "title": "ORCA Operator ${version}",
+      "artifactName": "ORCA-Operator-${version}-macOS-${arch}.${ext}",
+      "writeUpdateInfo": false,
+      "window": {
+        "width": 660,
+        "height": 420
+      },
+      "contents": [
+        {
+          "x": 180,
+          "y": 220,
+          "type": "file"
+        },
+        {
+          "x": 480,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "ORCA-Operator-${version}-Windows-${arch}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "ORCA Operator",
+      "menuCategory": "AtonixCorp",
+      "displayLanguageSelector": false,
+      "language": "1033",
+      "license": "../LICENSE",
+      "installerIcon": "electron/assets/icon.ico",
+      "uninstallerIcon": "electron/assets/icon.ico",
+      "installerHeaderIcon": "electron/assets/icon.ico",
+      "installerHeader": "electron/assets/installer-header.bmp",
+      "installerSidebar": "electron/assets/installer-sidebar.bmp",
+      "uninstallerSidebar": "electron/assets/installer-sidebar.bmp",
+      "deleteAppDataOnUninstall": false,
+      "warningsAsErrors": true
+    }
   }
 }

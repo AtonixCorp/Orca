@@ -18,16 +18,33 @@ from hardware.drone_edge.reference import build_reference_stack
 from hardware.drone_edge.rfp_packet import build_rfp_packet
 from hardware.drone_edge.ros2_contract import build_ros2_node_contract
 from hardware.monitoring.agent import collect_sample
+from orca_shared.identity import bootstrap_process_identity, identity_posture
 
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+
+PROCESS_IDENTITY = bootstrap_process_identity(
+    component_type="agent",
+    role="orca.agent",
+    description="ORCA hardware monitoring agent",
+)
 
 app = FastAPI(title="Orca Hardware Domain")
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "hardware-domain"}
+    return {
+        "status": "ok",
+        "service": "hardware-domain",
+        "upi": PROCESS_IDENTITY.upi,
+        "role": PROCESS_IDENTITY.role,
+    }
+
+
+@app.get("/health/identity")
+async def health_identity() -> dict[str, object]:
+    return identity_posture(PROCESS_IDENTITY)
 
 
 @app.get("/monitoring/sample")

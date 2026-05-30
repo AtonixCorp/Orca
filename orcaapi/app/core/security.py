@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any
 
 import jwt  # PyJWT — pure-Python JWT library
@@ -30,6 +31,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from orca_shared.identity import ProcessIdentity, bootstrap_process_identity, identity_role_to_api_role
 
 # bcrypt is intentionally slow → safe against brute force on stolen hashes.
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -38,8 +40,6 @@ _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # local installs no longer require user login or account-backed sessions.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
-LOCAL_SYSTEM_SUBJECT = "local-device"
-LOCAL_SYSTEM_ROLE = "admin"
 LOCAL_SYSTEM_EXP = 4102444800
 
 
@@ -49,6 +49,18 @@ class TokenPayload(BaseModel):
     sub: str
     role: str = "viewer"
     exp: int
+
+
+@lru_cache(maxsize=1)
+def get_local_process_identity() -> ProcessIdentity:
+    settings = get_settings()
+    return bootstrap_process_identity(
+        component_type=settings.orca_component_type,
+        role=settings.orca_identity_role,
+        description=settings.orca_identity_description,
+        upi=settings.orca_upi,
+        ldap_base_dn=settings.ldap_base_dn,
+    )
 
 
 def hash_password(plain: str) -> str:
@@ -112,7 +124,12 @@ def get_current_user(token: str | None = Depends(oauth2_scheme)) -> TokenPayload
     grants an in-process system identity instead of requiring login.
     """
     if token is None or not token.strip():
-        return TokenPayload(sub=LOCAL_SYSTEM_SUBJECT, role=LOCAL_SYSTEM_ROLE, exp=LOCAL_SYSTEM_EXP)
+        process_identity = get_local_process_identity()
+        return TokenPayload(
+            sub=process_identity.upi,
+            role=identity_role_to_api_role(process_identity.role),
+            exp=LOCAL_SYSTEM_EXP,
+        )
     return decode_token(token)
 
 

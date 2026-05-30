@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_current_user, get_local_process_identity
 from app.main import app
 from app.schemas.gps import GPSPointOut
 from app.services.gps_tracking import gps_tracking_service
@@ -39,10 +39,13 @@ def test_gateway_health_chain() -> None:
     live = client.get("/api/v1/health/live")
     ready = client.get("/api/v1/health/ready")
     status = client.get("/api/v1/health/status")
+    identity = client.get("/api/v1/health/identity")
 
     assert live.status_code == 200
     assert ready.status_code == 200
     assert status.status_code == 200
+    assert identity.status_code == 200
+    assert identity.json()["upi"].startswith("orca:service:")
 
 
 def test_auth_chain_token_and_role_enforcement() -> None:
@@ -75,6 +78,15 @@ def test_auth_chain_token_and_role_enforcement() -> None:
 
     assert viewer_res.status_code == 403
     assert operator_res.status_code == 201
+
+
+def test_local_identity_uses_orca_upi() -> None:
+    local_claims = get_current_user(None)
+    local_identity = get_local_process_identity()
+
+    assert local_claims.sub == local_identity.upi
+    assert local_claims.sub.startswith("orca:service:")
+    assert local_claims.role == "admin"
 
 
 def test_websocket_flow_events_requires_auth() -> None:

@@ -66,7 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     api_subparsers = api_parser.add_subparsers(dest="api_command", required=True)
 
     health_parser = api_subparsers.add_parser("health", help="Query API health endpoints")
-    health_parser.add_argument("endpoint", choices=("live", "ready", "status"), default="status", nargs="?")
+    health_parser.add_argument("endpoint", choices=("live", "ready", "status", "identity"), default="status", nargs="?")
 
     control_parser = api_subparsers.add_parser("control-plane", help="Query dashboard control-plane endpoints")
     control_parser.add_argument(
@@ -168,6 +168,8 @@ def _run_api(args: argparse.Namespace) -> Any:
             return client.health_live()
         if args.endpoint == "ready":
             return client.health_ready()
+        if args.endpoint == "identity":
+            return client.health_identity()
         return client.health_status()
     if args.api_command == "control-plane":
         if args.endpoint == "overview":

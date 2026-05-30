@@ -18,6 +18,7 @@ import Docs from "./pages/Docs";
 import Downloads from "./pages/Downloads";
 import Firmware from "./pages/Firmware";
 import NotFound from "./pages/NotFound";
+import OperatorControlCenter from "./pages/OperatorControlCenter";
 import Roadmap from "./pages/Roadmap";
 
 function GitHubIcon() {
@@ -43,6 +44,8 @@ function GitLabIcon() {
 }
 
 export default function App() {
+  const isDesktopRuntime = window.orcaDesktop?.isDesktop ?? false;
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -53,6 +56,7 @@ export default function App() {
           </div>
         </Link>
         <nav className="app-nav">
+          <Link to="/operator">Control Center</Link>
           <Link to="/downloads">Downloads</Link>
           <Link to="/docs">Docs</Link>
           <a href="https://github.com/AtonixCorp/Orca" target="_blank" rel="noreferrer">
@@ -68,8 +72,9 @@ export default function App() {
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/" element={<Navigate to={isDesktopRuntime ? "/operator" : "/home"} replace />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/operator" element={<OperatorControlCenter />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/architecture" element={<Architecture />} />
@@ -83,6 +88,7 @@ export default function App() {
       <footer className="app-footer">
         <small>© 2026 ORCA. All rights reserved.</small>
         <div className="footer-links">
+          <Link to="/operator">Control Center</Link>
           <a href="https://github.com/AtonixCorp/Orca" target="_blank" rel="noreferrer">
             <GitHubIcon />
             <span>GitHub</span>
