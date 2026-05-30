@@ -28,6 +28,8 @@ const layers = [
   },
 ];
 
+const assetBasePath = `${import.meta.env.BASE_URL}assets/`;
+
 export default function Architecture() {
   return (
     <section className="page-shell narrative-page">
@@ -41,7 +43,7 @@ export default function Architecture() {
 
       <img
         className="wide-visual"
-        src="/assets/platform-overview.svg"
+        src={`${assetBasePath}platform-overview.svg`}
         alt="Orca platform architecture"
       />
 
@@ -58,9 +60,18 @@ export default function Architecture() {
       </div>
 
       <div className="visual-grid">
-        <img src="/assets/ingestion-protocols.svg" alt="Ingestion protocol adapters" />
-        <img src="/assets/storage-backbone.svg" alt="Storage and event backbone" />
-        <img src="/assets/security-quantum.svg" alt="Security and quantum-safe controls" />
+        <img
+          src={`${assetBasePath}ingestion-protocols.svg`}
+          alt="Ingestion protocol adapters"
+        />
+        <img
+          src={`${assetBasePath}storage-backbone.svg`}
+          alt="Storage and event backbone"
+        />
+        <img
+          src={`${assetBasePath}security-quantum.svg`}
+          alt="Security and quantum-safe controls"
+        />
       </div>
     </section>
   );

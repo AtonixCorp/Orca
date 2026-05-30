@@ -54,6 +54,8 @@ const architectureLayers = [
   "Documentation and developer guides",
 ];
 
+const platformOverviewAsset = `${import.meta.env.BASE_URL}assets/platform-overview.svg`;
+
 export default function Home() {
   return (
     <div className="home-page">
@@ -177,7 +179,7 @@ export default function Home() {
         </div>
         <img
           className="wide-visual"
-          src="/assets/platform-overview.svg"
+          src={platformOverviewAsset}
           alt="Orca platform overview"
         />
       </section>
