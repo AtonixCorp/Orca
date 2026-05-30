@@ -181,7 +181,7 @@ class EventPipelineService:
                 },
                 max_sentences=2,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110 - alert enrichment is best-effort only
             pass
 
         alert = AlertEvent(

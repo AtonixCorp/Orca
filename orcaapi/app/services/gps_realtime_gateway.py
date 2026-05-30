@@ -92,7 +92,7 @@ class GPSRealtimeGatewayService:
                 try:
                     _ = queue.get_nowait()
                     queue.put_nowait(payload)
-                except Exception:
+                except Exception:  # nosec B112 - stale queue entries are dropped intentionally
                     continue
 
     async def _redis_client(self) -> Redis | None:
@@ -137,7 +137,7 @@ class GPSRealtimeGatewayService:
         for value in rows.values():
             try:
                 parsed.append(json.loads(value))
-            except Exception:
+            except Exception:  # nosec B112 - malformed cached values are skipped intentionally
                 continue
         return parsed
 

@@ -36,9 +36,9 @@ export default function Architecture() {
       <span className="eyebrow">Architecture overview</span>
       <h2>Layered from device firmware to local operator tooling.</h2>
       <p className="lead-text">
-        Orca is built as a layered architecture so protocol adapters,
-        storage, security, firmware distribution, local tooling, and optional
-        backend services can evolve independently while still operating as one backbone.
+        Orca is built as a layered architecture so protocol adapters, storage,
+        security, firmware distribution, local tooling, and optional backend
+        services can evolve independently while still operating as one backbone.
       </p>
 
       <img

@@ -34,7 +34,7 @@ class GPSUDPProtocol(asyncio.DatagramProtocol):
 class GPSUDPIngestor:
     """Receive JSON GPS packets over UDP and store validated points."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 9011) -> None:  # noqa: S104
+    def __init__(self, host: str = "0.0.0.0", port: int = 9011) -> None:  # noqa: S104  # nosec B104
         self.host = host
         self.port = port
 
