@@ -2,12 +2,92 @@
 #include <stddef.h>
 
 #include "orca_drivers.h"
+#include "orca_handoff.h"
 #include "orca_init.h"
 #include "orca_platform.h"
+
+#define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
+#define MULTIBOOT_INFO_FLAG_MODULES (1u << 3)
+
+typedef struct {
+    uint32_t mod_start;
+    uint32_t mod_end;
+    uint32_t string;
+    uint32_t reserved;
+} multiboot_module;
+
+typedef struct {
+    uint32_t flags;
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+    uint32_t boot_device;
+    uint32_t cmdline;
+    uint32_t mods_count;
+    uint32_t mods_addr;
+} multiboot_info;
+
+typedef struct {
+    uint32_t entry_count;
+    uint8_t valid;
+    uint8_t found_init;
+    uint8_t found_manifest;
+    uint8_t captured_files;
+} initramfs_scan_result;
 
 static volatile uint16_t* const VGA_BUFFER = (uint16_t*)0xB8000;
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
+static const uint16_t SERIAL_COM1_PORT = 0x3F8;
+static const uint16_t DEBUGCON_PORT = 0xE9;
+
+static inline void io_out8(uint16_t port, uint8_t value) {
+    __asm__ __volatile__("outb %0, %1" : : "a"(value), "Nd"(port));
+}
+
+static inline uint8_t io_in8(uint16_t port) {
+    uint8_t value = 0;
+    __asm__ __volatile__("inb %1, %0" : "=a"(value) : "Nd"(port));
+    return value;
+}
+
+static void serial_initialize(void) {
+    io_out8(SERIAL_COM1_PORT + 1, 0x00);
+    io_out8(SERIAL_COM1_PORT + 3, 0x80);
+    io_out8(SERIAL_COM1_PORT + 0, 0x03);
+    io_out8(SERIAL_COM1_PORT + 1, 0x00);
+    io_out8(SERIAL_COM1_PORT + 3, 0x03);
+    io_out8(SERIAL_COM1_PORT + 2, 0xC7);
+    io_out8(SERIAL_COM1_PORT + 4, 0x0B);
+}
+
+static int serial_can_transmit(void) {
+    return (io_in8(SERIAL_COM1_PORT + 5) & 0x20) != 0;
+}
+
+static void serial_write_char(char value) {
+    while (!serial_can_transmit()) {
+    }
+
+    io_out8(SERIAL_COM1_PORT, (uint8_t)value);
+    io_out8(DEBUGCON_PORT, (uint8_t)value);
+}
+
+static void serial_write_string(const char* value) {
+    size_t i = 0;
+
+    while (value[i] != '\0') {
+        if (value[i] == '\n') {
+            serial_write_char('\r');
+        }
+        serial_write_char(value[i]);
+        ++i;
+    }
+}
+
+static void serial_write_line(const char* value) {
+    serial_write_string(value);
+    serial_write_string("\n");
+}
 
 static inline uint16_t vga_entry(unsigned char c, uint8_t color) {
     return (uint16_t)c | (uint16_t)color << 8;
@@ -27,6 +107,177 @@ static void write_string_at(const char* s, size_t row, size_t col, uint8_t color
         VGA_BUFFER[row * VGA_WIDTH + col + i] = vga_entry((unsigned char)s[i], color);
         ++i;
     }
+}
+
+static size_t string_length(const char* value) {
+    size_t length = 0;
+
+    while (value[length] != '\0') {
+        ++length;
+    }
+
+    return length;
+}
+
+static int buffer_equals_string(const char* buffer, size_t buffer_size, const char* value) {
+    size_t expected_length = string_length(value);
+    size_t i = 0;
+
+    if (buffer_size != expected_length + 1) {
+        return 0;
+    }
+
+    for (i = 0; i < expected_length; ++i) {
+        if (buffer[i] != value[i]) {
+            return 0;
+        }
+    }
+
+    return buffer[expected_length] == '\0';
+}
+
+static int buffer_equals_target_path(const char* buffer, size_t buffer_size, const char* value) {
+    return buffer_equals_string(buffer, buffer_size, value);
+}
+
+static int buffer_starts_with(const char* buffer, const char* value, size_t length) {
+    size_t i = 0;
+
+    for (i = 0; i < length; ++i) {
+        if (buffer[i] != value[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static uint32_t parse_ascii_hex(const char* value, size_t length, int* valid) {
+    uint32_t parsed = 0;
+    size_t i = 0;
+
+    *valid = 1;
+    for (i = 0; i < length; ++i) {
+        parsed <<= 4;
+        if (value[i] >= '0' && value[i] <= '9') {
+            parsed |= (uint32_t)(value[i] - '0');
+        } else if (value[i] >= 'A' && value[i] <= 'F') {
+            parsed |= (uint32_t)(value[i] - 'A' + 10);
+        } else if (value[i] >= 'a' && value[i] <= 'f') {
+            parsed |= (uint32_t)(value[i] - 'a' + 10);
+        } else {
+            *valid = 0;
+            return 0;
+        }
+    }
+
+    return parsed;
+}
+
+static const uint8_t* align_up_4(const uint8_t* value) {
+    uintptr_t address = (uintptr_t)value;
+    address = (address + 3u) & ~(uintptr_t)3u;
+    return (const uint8_t*)address;
+}
+
+static int cpio_magic_valid(const char* header) {
+    return buffer_starts_with(header, "070701", 6) || buffer_starts_with(header, "070702", 6);
+}
+
+static initramfs_scan_result inspect_initramfs_module(uint32_t module_start, uint32_t module_end) {
+    initramfs_scan_result result;
+    const uint8_t* cursor = (const uint8_t*)(uintptr_t)module_start;
+    const uint8_t* limit = (const uint8_t*)(uintptr_t)module_end;
+
+    result.entry_count = 0;
+    result.valid = 0;
+    result.found_init = 0;
+    result.found_manifest = 0;
+    result.captured_files = 0;
+
+    orca_runtime_handoff_reset();
+    orca_runtime_handoff_set_module(module_start, module_end);
+
+    if (module_start == 0 || module_end <= module_start) {
+        return result;
+    }
+
+    while (cursor + 110u <= limit) {
+        const char* header = (const char*)cursor;
+        const char* entry_name = 0;
+        const uint8_t* file_data = 0;
+        const uint8_t* next = 0;
+        uint32_t name_size = 0;
+        uint32_t file_size = 0;
+        int valid = 0;
+
+        if (!cpio_magic_valid(header)) {
+            return result;
+        }
+
+        file_size = parse_ascii_hex(header + 54, 8, &valid);
+        if (!valid) {
+            return result;
+        }
+
+        name_size = parse_ascii_hex(header + 94, 8, &valid);
+        if (!valid || name_size == 0) {
+            return result;
+        }
+
+        if ((size_t)(limit - cursor) < 110u + (size_t)name_size) {
+            return result;
+        }
+
+        entry_name = (const char*)(cursor + 110u);
+        result.entry_count += 1;
+
+        if (buffer_equals_string(entry_name, name_size, "init")) {
+            result.found_init = 1;
+        }
+        if (buffer_equals_string(entry_name, name_size, "usr/share/orca/rootfs.manifest")) {
+            result.found_manifest = 1;
+        }
+        if (buffer_equals_string(entry_name, name_size, "TRAILER!!!")) {
+            result.valid = 1;
+            orca_runtime_handoff_set_archive_state(result.valid, result.entry_count);
+            return result;
+        }
+
+        file_data = align_up_4(cursor + 110u + name_size);
+        if (file_data > limit || (size_t)(limit - file_data) < (size_t)file_size) {
+            return result;
+        }
+
+        if (buffer_equals_target_path(entry_name, name_size, "init")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_INIT, file_data, file_size);
+            result.captured_files += 1u;
+        } else if (buffer_equals_target_path(entry_name, name_size, "usr/share/orca/rootfs.manifest")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_ROOTFS_MANIFEST, file_data, file_size);
+            result.captured_files += 1u;
+        } else if (buffer_equals_target_path(entry_name, name_size, "etc/orca/ai/config.yaml")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_AI_CONFIG, file_data, file_size);
+            result.captured_files += 1u;
+        } else if (buffer_equals_target_path(entry_name, name_size, "etc/orca/network/orca-net.conf")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_NET_CONFIG, file_data, file_size);
+            result.captured_files += 1u;
+        } else if (buffer_equals_target_path(entry_name, name_size, "etc/orca/updater/ota.conf")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_OTA_CONFIG, file_data, file_size);
+            result.captured_files += 1u;
+        } else if (buffer_equals_target_path(entry_name, name_size, "etc/orca/system/init/profile.conf")) {
+            orca_runtime_handoff_capture_file(ORCA_HANDOFF_FILE_SYSTEM_INIT_PROFILE, file_data, file_size);
+            result.captured_files += 1u;
+        }
+
+        next = align_up_4(file_data + file_size);
+        if (next > limit || next < file_data) {
+            return result;
+        }
+
+        cursor = next;
+    }
+
+    return result;
 }
 
 static void append_token(char* buffer, size_t buffer_size, const char* token) {
@@ -196,41 +447,247 @@ static void write_phase_row(const orca_boot_phase_record* record, size_t row) {
     write_string_at(deferred, row, 37, 0x4E);
 }
 
+static void write_uint_hex(uint32_t value, size_t row, size_t col, uint8_t color) {
+    char buffer[11] = "0x00000000";
+    static const char hex[] = "0123456789ABCDEF";
+    size_t i = 0;
+
+    for (i = 0; i < 8; ++i) {
+        buffer[9 - i] = hex[value & 0xFu];
+        value >>= 4;
+    }
+
+    write_string_at(buffer, row, col, color);
+}
+
+static void serial_write_hex(uint32_t value) {
+    char buffer[11] = "0x00000000";
+    static const char hex[] = "0123456789ABCDEF";
+    size_t i = 0;
+
+    for (i = 0; i < 8; ++i) {
+        buffer[9 - i] = hex[value & 0xFu];
+        value >>= 4;
+    }
+
+    serial_write_string(buffer);
+}
+
+static void write_uint_decimal(uint32_t value, size_t row, size_t col, uint8_t color) {
+    char buffer[11];
+    size_t i = 0;
+    size_t start = 0;
+
+    for (i = 0; i < sizeof(buffer); ++i) {
+        buffer[i] = '\0';
+    }
+
+    if (value == 0u) {
+        buffer[0] = '0';
+        buffer[1] = '\0';
+        write_string_at(buffer, row, col, color);
+        return;
+    }
+
+    i = sizeof(buffer) - 1;
+    while (value > 0u && i > 0u) {
+        buffer[--i] = (char)('0' + (value % 10u));
+        value /= 10u;
+    }
+
+    start = i;
+    write_string_at(&buffer[start], row, col, color);
+}
+
+static void serial_write_decimal(uint32_t value) {
+    char buffer[11];
+    size_t i = 0;
+
+    for (i = 0; i < sizeof(buffer); ++i) {
+        buffer[i] = '\0';
+    }
+
+    if (value == 0u) {
+        serial_write_string("0");
+        return;
+    }
+
+    i = sizeof(buffer) - 1;
+    while (value > 0u && i > 0u) {
+        buffer[--i] = (char)('0' + (value % 10u));
+        value /= 10u;
+    }
+
+    serial_write_string(&buffer[i]);
+}
+
+static size_t render_runtime_handoff(size_t start_row) {
+    const orca_runtime_handoff* handoff = orca_get_runtime_handoff();
+    size_t i = 0;
+    size_t rows_used = 1;
+
+    write_string_at("Runtime handoff table:", start_row, 2, 0x1E);
+    write_uint_hex(handoff->module_start, start_row, 26, 0x1F);
+    write_uint_decimal(handoff->archive_entries, start_row, 38, 0x1F);
+    write_string_at(handoff->archive_valid != 0u ? "valid" : "invalid", start_row, 46, handoff->archive_valid != 0u ? 0x1A : 0x4F);
+    serial_write_string("runtime handoff files=");
+    serial_write_decimal(ORCA_MAX_HANDOFF_FILES);
+    serial_write_string("\n");
+    serial_write_string("runtime handoff module=");
+    serial_write_hex(handoff->module_start);
+    serial_write_string(" entries=");
+    serial_write_decimal(handoff->archive_entries);
+    serial_write_string(" state=");
+    serial_write_string(handoff->archive_valid != 0u ? "valid" : "invalid");
+    serial_write_string("\n");
+
+    for (i = 0; i < ORCA_MAX_HANDOFF_FILES && start_row + 1 + i < VGA_HEIGHT; ++i) {
+        const orca_handoff_file_record* record = &handoff->files[i];
+        write_string_at(record->path, start_row + 1 + i, 4, 0x1F);
+        write_string_at(record->available != 0u ? "ready" : "miss", start_row + 1 + i, 42, record->available != 0u ? 0x1A : 0x4F);
+        write_uint_decimal(record->size, start_row + 1 + i, 50, 0x1F);
+
+        serial_write_string("handoff ");
+        serial_write_string(orca_handoff_file_token(record->id));
+        serial_write_string(" state=");
+        serial_write_string(record->available != 0u ? "ready" : "miss");
+        serial_write_string(" size=");
+        serial_write_decimal(record->size);
+        serial_write_string("\n");
+        rows_used += 1;
+    }
+
+    return rows_used;
+}
+
+static void write_module_string(uint32_t address, size_t row, size_t col, uint8_t color) {
+    const char* module_string = (const char*)(uintptr_t)address;
+
+    if (address == 0) {
+        write_string_at("(no-cmdline)", row, col, color);
+        return;
+    }
+
+    write_string_at(module_string, row, col, color);
+}
+
+static size_t render_multiboot_modules(uint32_t info_ptr, size_t start_row) {
+    const multiboot_info* info = (const multiboot_info*)(uintptr_t)info_ptr;
+    const multiboot_module* modules = 0;
+    initramfs_scan_result scan_result;
+    size_t count = 0;
+    size_t i = 0;
+    size_t rows_used = 0;
+
+    if (info_ptr == 0 || (info->flags & MULTIBOOT_INFO_FLAG_MODULES) == 0 || info->mods_count == 0) {
+        write_string_at("Initramfs handoff: no multiboot modules", start_row, 2, 0x4E);
+        serial_write_line("initramfs handoff: no multiboot modules");
+        return 1;
+    }
+
+    modules = (const multiboot_module*)(uintptr_t)info->mods_addr;
+    count = info->mods_count;
+    rows_used = count + 1;
+
+    write_string_at("Initramfs handoff: multiboot modules detected", start_row, 2, 0x1A);
+    serial_write_line("initramfs handoff: multiboot modules detected");
+    for (i = 0; i < count && start_row + 1 + i < VGA_HEIGHT; ++i) {
+        write_string_at("mod", start_row + 1 + i, 4, 0x1E);
+        write_uint_hex(modules[i].mod_start, start_row + 1 + i, 10, 0x1F);
+        write_uint_hex(modules[i].mod_end, start_row + 1 + i, 22, 0x1F);
+        write_module_string(modules[i].string, start_row + 1 + i, 34, 0x1F);
+
+        serial_write_string("module ");
+        serial_write_hex((uint32_t)i);
+        serial_write_string(" start=");
+        serial_write_hex(modules[i].mod_start);
+        serial_write_string(" end=");
+        serial_write_hex(modules[i].mod_end);
+        serial_write_string(" cmd=");
+        if (modules[i].string == 0) {
+            serial_write_line("(no-cmdline)");
+        } else {
+            serial_write_line((const char*)(uintptr_t)modules[i].string);
+        }
+    }
+
+    scan_result = inspect_initramfs_module(modules[0].mod_start, modules[0].mod_end);
+    if (start_row + rows_used < VGA_HEIGHT) {
+        write_string_at("Initramfs scan:", start_row + rows_used, 2, 0x1E);
+        write_string_at(scan_result.valid != 0 ? "newc-ok" : "invalid", start_row + rows_used, 18, scan_result.valid != 0 ? 0x1A : 0x4F);
+    }
+    if (start_row + rows_used + 1 < VGA_HEIGHT) {
+        write_string_at("entries", start_row + rows_used + 1, 2, 0x1F);
+        write_uint_hex(scan_result.entry_count, start_row + rows_used + 1, 10, 0x1F);
+        write_string_at(scan_result.found_init != 0 ? "init:yes" : "init:no", start_row + rows_used + 1, 24, scan_result.found_init != 0 ? 0x1A : 0x4F);
+        write_string_at(scan_result.found_manifest != 0 ? "manifest:yes" : "manifest:no", start_row + rows_used + 1, 36, scan_result.found_manifest != 0 ? 0x1A : 0x4F);
+        write_string_at("captured", start_row + rows_used + 1, 52, 0x1F);
+        write_uint_decimal(scan_result.captured_files, start_row + rows_used + 1, 62, 0x1F);
+        rows_used += 2;
+    }
+
+    serial_write_string("initramfs scan valid=");
+    serial_write_line(scan_result.valid != 0 ? "yes" : "no");
+    serial_write_string("initramfs scan entries=");
+    serial_write_hex(scan_result.entry_count);
+    serial_write_string(" init=");
+    serial_write_string(scan_result.found_init != 0 ? "yes" : "no");
+    serial_write_string(" manifest=");
+    serial_write_line(scan_result.found_manifest != 0 ? "yes" : "no");
+    serial_write_string("initramfs captured files=");
+    serial_write_decimal(scan_result.captured_files);
+    serial_write_string("\n");
+
+    return rows_used;
+}
+
 void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_ptr) {
-    (void)multiboot_info_ptr;
     size_t driver_count = 0;
     size_t layer_count = 0;
     size_t booted_services = 0;
     size_t phase_count = 0;
+    size_t module_rows = 0;
+    size_t handoff_rows = 0;
     const orca_driver_descriptor* drivers = orca_get_registered_drivers(&driver_count);
     const orca_layer_descriptor* layers = orca_get_platform_layers(&layer_count);
     orca_service_boot_record service_records[ORCA_MAX_SYSTEM_SERVICES];
     orca_boot_phase_record phase_records[ORCA_BOOT_PHASE_COMPLETE];
 
+    serial_initialize();
     clear_screen(0x1F);
     write_string_at("ORCA OS Boot Checkpoint", 1, 2, 0x1F);
+    serial_write_line("ORCA OS Boot Checkpoint");
 
-    if (multiboot_magic == 0x2BADB002) {
+    if (multiboot_magic == MULTIBOOT_BOOTLOADER_MAGIC) {
         write_string_at("Multiboot magic validated.", 3, 2, 0x1A);
+        serial_write_line("multiboot magic validated");
     } else {
         write_string_at("Multiboot magic invalid.", 3, 2, 0x4F);
+        serial_write_line("multiboot magic invalid");
     }
+    write_uint_hex(multiboot_magic, 3, 30, 0x1F);
+    serial_write_string("multiboot magic value=");
+    serial_write_hex(multiboot_magic);
+    serial_write_string("\n");
 
-    write_string_at("3-layer ORCA OS scaffold loaded:", 5, 2, 0x1E);
+    module_rows = render_multiboot_modules(multiboot_info_ptr, 4);
+    handoff_rows = render_runtime_handoff(5 + module_rows);
+
+    write_string_at("3-layer ORCA OS scaffold loaded:", 6 + module_rows + handoff_rows, 2, 0x1E);
 
     if (layer_count > 0) {
-        write_layer_row(&layers[0], 6, 0x1E);
+        write_layer_row(&layers[0], 7 + module_rows + handoff_rows, 0x1E);
     }
     if (layer_count > 1) {
-        write_layer_row(&layers[1], 7, 0x1E);
+        write_layer_row(&layers[1], 8 + module_rows + handoff_rows, 0x1E);
     }
     if (layer_count > 2) {
-        write_layer_row(&layers[2], 8, 0x1E);
+        write_layer_row(&layers[2], 9 + module_rows + handoff_rows, 0x1E);
     }
 
-    write_string_at("Layer 1 driver registry:", 10, 2, 0x1E);
-    for (size_t i = 0; i < driver_count && 11 + i < VGA_HEIGHT; ++i) {
-        write_driver_row(&drivers[i], 11 + i);
+    write_string_at("Layer 1 driver registry:", 11 + module_rows + handoff_rows, 2, 0x1E);
+    for (size_t i = 0; i < driver_count && 12 + module_rows + handoff_rows + i < VGA_HEIGHT; ++i) {
+        write_driver_row(&drivers[i], 12 + module_rows + handoff_rows + i);
     }
 
     booted_services = orca_boot_system_services(
@@ -241,22 +698,23 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_ptr) {
         &phase_count
     );
 
-    write_string_at("Boot phases:", 16, 2, 0x1E);
-    for (size_t i = 0; i < phase_count && 17 + i < VGA_HEIGHT; ++i) {
-        write_phase_row(&phase_records[i], 17 + i);
+    write_string_at("Boot phases:", 17 + module_rows + handoff_rows, 2, 0x1E);
+    for (size_t i = 0; i < phase_count && 18 + module_rows + handoff_rows + i < VGA_HEIGHT; ++i) {
+        write_phase_row(&phase_records[i], 18 + module_rows + handoff_rows + i);
     }
 
-    write_string_at("Layer 2 service table:", 16, 44, 0x1E);
-    write_string_at("svc           stage       drv         dep       ph   status", 17, 20, 0x1F);
-    for (size_t i = 0; i < booted_services && 18 + i < VGA_HEIGHT; ++i) {
-        write_service_row(&service_records[i], 18 + i);
+    write_string_at("Layer 2 service table:", 17 + module_rows + handoff_rows, 44, 0x1E);
+    write_string_at("svc           stage       drv         dep       ph   status", 18 + module_rows + handoff_rows, 20, 0x1F);
+    for (size_t i = 0; i < booted_services && 19 + module_rows + handoff_rows + i < VGA_HEIGHT; ++i) {
+        write_service_row(&service_records[i], 19 + module_rows + handoff_rows + i);
     }
 
-    if (booted_services > 0 && 18 + booted_services < VGA_HEIGHT) {
-        write_service_note_row(&service_records[booted_services - 1], 18 + booted_services);
+    if (booted_services > 0 && 19 + module_rows + handoff_rows + booted_services < VGA_HEIGHT) {
+        write_service_note_row(&service_records[booted_services - 1], 19 + module_rows + handoff_rows + booted_services);
     }
 
     write_string_at("Next: interrupts, memory, scheduler, user-mode runtime.", 24, 2, 0x1E);
+    serial_write_line("boot checkpoint complete");
 
     for (;;) {
         __asm__ __volatile__("hlt");

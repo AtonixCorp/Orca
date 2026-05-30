@@ -2,6 +2,8 @@ SHELL := /bin/bash
 
 DEFAULT_BUILD_DIR := $(shell if mkdir -p build >/dev/null 2>&1 && [ -w build ]; then printf '%s' build; else printf '%s' /tmp/orcaos-build; fi)
 BUILD_DIR ?= $(DEFAULT_BUILD_DIR)
+ROOTFS_DIR := $(BUILD_DIR)/rootfs
+INITRAMFS_FILE := $(BUILD_DIR)/orcos.initramfs.cpio.gz
 ISO_DIR := $(BUILD_DIR)/iso
 BOOT_DIR := $(ISO_DIR)/boot
 GRUB_DIR := $(BOOT_DIR)/grub
@@ -12,6 +14,7 @@ CFLAGS := -Isrc -m32 -ffreestanding -fno-pie -fno-stack-protector -nostdlib -Wal
 LDFLAGS := -m elf_i386 -T linker.ld -nostdlib
 
 HAS_ISO_TOOLS := $(shell command -v grub-mkrescue >/dev/null 2>&1 && command -v xorriso >/dev/null 2>&1 && echo 1 || echo 0)
+HAS_INITRAMFS_TOOLS := $(shell command -v cpio >/dev/null 2>&1 && command -v gzip >/dev/null 2>&1 && echo 1 || echo 0)
 
 KERNEL_BIN := $(BUILD_DIR)/orcos.bin
 ISO_FILE := $(BUILD_DIR)/orcos.iso
@@ -19,6 +22,7 @@ ISO_FILE := $(BUILD_DIR)/orcos.iso
 SRC_ASM := src/boot.s
 SRC_C := \
 	src/kernel.c \
+	src/orca_handoff.c \
 	src/orca_drivers.c \
 	src/orca_interrupts.c \
 	src/orca_init.c \
@@ -33,9 +37,9 @@ OBJ_ASM := $(patsubst src/%.s,$(BUILD_DIR)/%.o,$(SRC_ASM))
 OBJ_C := $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(SRC_C))
 OBJS := $(OBJ_ASM) $(OBJ_C)
 
-.PHONY: all clean run iso kernel maybe-iso check-tools check-iso-tools show-build-dir
+.PHONY: all clean run run-direct iso kernel rootfs initramfs verify-release maybe-iso check-tools check-iso-tools show-build-dir
 
-all: check-tools kernel maybe-iso
+all: check-tools kernel rootfs initramfs maybe-iso
 
 check-tools:
 	@command -v $(CC) >/dev/null || (echo "Missing gcc" && exit 1)
@@ -66,6 +70,21 @@ $(KERNEL_BIN): $(OBJS) linker.ld
 kernel: $(KERNEL_BIN)
 	@echo "Built $(KERNEL_BIN)"
 
+rootfs:
+	bash scripts/generate-rootfs.sh "$(ROOTFS_DIR)"
+	@echo "Built $(ROOTFS_DIR)"
+
+initramfs: rootfs
+	@if [ "$(HAS_INITRAMFS_TOOLS)" = "1" ]; then \
+		cd "$(ROOTFS_DIR)" && find . -mindepth 1 -print | LC_ALL=C sort | cpio -o -H newc 2>/dev/null | gzip -9 > "$(INITRAMFS_FILE)"; \
+		echo "Built $(INITRAMFS_FILE)"; \
+	else \
+		echo "Skipping initramfs: cpio/gzip not available. Rootfs directory: $(ROOTFS_DIR)"; \
+	fi
+
+verify-release: kernel rootfs initramfs
+	bash scripts/verify-release.sh "$(KERNEL_BIN)" "$(ROOTFS_DIR)" "$(INITRAMFS_FILE)"
+
 maybe-iso:
 	@if [ "$(HAS_ISO_TOOLS)" = "1" ]; then \
 		$(MAKE) iso; \
@@ -73,9 +92,12 @@ maybe-iso:
 		echo "Skipping ISO image: grub-mkrescue/xorriso not available. Kernel binary: $(KERNEL_BIN)"; \
 	fi
 
-iso: check-iso-tools $(KERNEL_BIN)
+
+iso: check-iso-tools $(KERNEL_BIN) rootfs initramfs
 	@mkdir -p $(GRUB_DIR)
+	cp -a "$(ROOTFS_DIR)"/. "$(ISO_DIR)"/
 	cp $(KERNEL_BIN) $(BOOT_DIR)/orcos.bin
+	@if [ -f "$(INITRAMFS_FILE)" ]; then cp "$(INITRAMFS_FILE)" $(BOOT_DIR)/orcos.initramfs.cpio.gz; fi
 	cp grub/grub.cfg $(GRUB_DIR)/grub.cfg
 	grub-mkrescue -o $(ISO_FILE) $(ISO_DIR)
 	@echo "Built $(ISO_FILE)"
@@ -83,6 +105,10 @@ iso: check-iso-tools $(KERNEL_BIN)
 run: iso
 	@command -v qemu-system-i386 >/dev/null || (echo "Missing qemu-system-i386" && exit 1)
 	qemu-system-i386 -cdrom $(ISO_FILE) -m 256M
+
+run-direct: iso
+	@command -v qemu-system-i386 >/dev/null || (echo "Missing qemu-system-i386" && exit 1)
+	qemu-system-i386 -cdrom $(ISO_FILE) -m 256M -nographic -serial stdio -monitor none -no-reboot -no-shutdown
 
 clean:
 	rm -rf $(BUILD_DIR)

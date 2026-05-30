@@ -48,10 +48,15 @@ This layer sits on top of the platform and should consume stable service contrac
 - Layer 2 service dependency model based on required drivers and prior service readiness
 - Linker script loading kernel at 1 MiB
 - GRUB ISO generation when host tooling is available
-- QEMU run target
+- Initramfs packaging from the generated ORCA root filesystem when `cpio` and `gzip` are available
+- QEMU run targets for graphical and headless boot validation
 - Dockerized build environment for reproducibility
 - Build fallback to a writable temp directory when `build/` is not writable
 - Graceful skip of ISO packaging when `grub-mkrescue` or `xorriso` is unavailable
+- Graceful skip of initramfs packaging when `cpio` or `gzip` is unavailable
+- Release verification script covering the kernel, rootfs manifest, and initramfs contents
+- Rootfs bootstrap supervisor for ORCA services inside the generated image
+- Kernel-side multiboot module inspection plus `newc` initramfs scan
 
 ## Current Boot Contracts
 
@@ -91,14 +96,21 @@ Because storage is intentionally marked unavailable in the current driver regist
 - `Makefile`: Build, ISO, and run commands
 - `Dockerfile.toolchain`: Toolchain container
 - `scripts/build-in-docker.sh`: Containerized build entry
+- `scripts/generate-rootfs.sh`: Rootfs tree generation, default ORCA configs, and manifest emission
+- `scripts/verify-release.sh`: Release artifact verification for kernel, rootfs, and initramfs
 
 ## Build and Run (Host Tools Installed)
 
 1. `cd OrcaOs`
 2. `make all`
 3. `make run`
+4. `make run-direct` for a headless QEMU boot that mirrors the GRUB serial log to your terminal
 
 If ISO tooling is missing, `make all` still produces the kernel binary and prints a skip notice instead of failing.
+
+If `cpio` and `gzip` are present, `make all` also emits `orcos.initramfs.cpio.gz` from the generated rootfs and stages it into the ISO boot directory.
+
+Use `make verify-release` to check the kernel artifact, rootfs manifest, and initramfs contents together before shipping a build.
 
 Use `make show-build-dir` to see whether the build is going to `build/` or a writable temp directory fallback.
 
@@ -132,9 +144,40 @@ On boot you should see:
 
 - `ORCA OS Boot Checkpoint`
 - `Multiboot magic validated.`
+- The observed multiboot magic value and the staged initramfs module address range
+- An initramfs scan result showing a valid `newc` archive with `init` and `/usr/share/orca/rootfs.manifest`
+- A runtime handoff table showing which extracted initramfs files are ready for later boot stages
 - The three ORCA OS layers with their first anchored component
 - A Layer 1 driver registry with readiness state
 - A Layer 2 service table showing stage, required drivers, dependencies, and status
+
+## Rootfs and Release Artifacts
+
+The generated root filesystem now includes richer default ORCA config templates for:
+
+- networking
+- updater
+- security
+- storage
+
+The rootfs generator also writes a deterministic filesystem manifest to `/usr/share/orca/rootfs.manifest` so release pipelines can verify the shipped tree contents.
+
+The build pipeline packages the generated rootfs as an initramfs archive (`orcos.initramfs.cpio.gz`) and exposes it to GRUB as a multiboot module.
+
+Inside the generated image, `/init` now hands control to a small ORCA supervisor that starts and monitors the ORCA service launchers under `/usr/lib/orca` instead of relying on per-service placeholder loops.
+
+The kernel now inspects the multiboot module list, parses the staged initramfs as a `newc` archive, and promotes a selected set of shipped files into a runtime handoff table for later boot stages.
+
+The current handoff table captures:
+
+- `init`
+- `/usr/share/orca/rootfs.manifest`
+- `/etc/orca/ai/config.yaml`
+- `/etc/orca/network/orca-net.conf`
+- `/etc/orca/updater/ota.conf`
+- `/etc/orca/system/init/profile.conf`
+
+For host portability, the supported validation path is the generated GRUB ISO plus QEMU. Native direct-kernel boot is not the compatibility contract; the portable contract is the bootable ISO artifact and the documented Docker/QEMU build flow.
 
 ## Next Chapter Checkpoints
 
