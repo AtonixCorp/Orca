@@ -24,4 +24,5 @@ COPY services/camera-service/README.md /srv/README.md
 FROM runtime
 COPY --from=builder /srv /srv
 
+USER 65532
 ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8010"]

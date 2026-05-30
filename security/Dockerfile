@@ -24,4 +24,5 @@ COPY security /app/security
 FROM runtime
 COPY --from=builder /app /app
 
+USER 10001
 ENTRYPOINT ["uvicorn", "security.service:app", "--host", "0.0.0.0", "--port", "8013"]

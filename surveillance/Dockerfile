@@ -23,4 +23,5 @@ COPY surveillance /app/surveillance
 FROM runtime
 COPY --from=builder /app /app
 
+USER 10001
 CMD ["uvicorn", "surveillance.drone_gateway_service:app", "--host", "0.0.0.0", "--port", "8020"]

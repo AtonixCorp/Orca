@@ -23,4 +23,5 @@ COPY hardware /app/hardware
 FROM runtime
 COPY --from=builder /app /app
 
+USER 65532
 ENTRYPOINT ["uvicorn", "hardware.service:app", "--host", "0.0.0.0", "--port", "8014"]

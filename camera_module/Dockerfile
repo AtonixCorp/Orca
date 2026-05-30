@@ -23,4 +23,5 @@ COPY camera_module /app/camera_module
 FROM runtime
 COPY --from=builder /app /app
 
+USER 65532
 ENTRYPOINT ["uvicorn", "camera_module.service:app", "--host", "0.0.0.0", "--port", "8010"]

@@ -23,4 +23,5 @@ COPY gps_module /app/gps_module
 FROM runtime
 COPY --from=builder /app /app
 
+USER 65532
 ENTRYPOINT ["uvicorn", "gps_module.service:app", "--host", "0.0.0.0", "--port", "8011"]

@@ -127,7 +127,7 @@ jobs:
         run: pytest ai/ai_models/tests camera_module/tests gps_module/tests ingestion/tests security/tests hardware/tests
 
   security-tests:
-    name: Root Security Tests
+    name: Security Policy Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

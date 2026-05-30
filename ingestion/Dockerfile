@@ -23,4 +23,5 @@ COPY ingestion /app/ingestion
 FROM runtime
 COPY --from=builder /app /app
 
+USER 65532
 ENTRYPOINT ["python", "-m", "ingestion.spark_job"]

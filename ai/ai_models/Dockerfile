@@ -22,4 +22,5 @@ RUN pip install --no-cache-dir -r /app/ai/requirements.txt
 FROM runtime
 COPY --from=builder /app /app
 
+USER 10001
 ENTRYPOINT ["uvicorn", "ai.ai_models.inference:app", "--host", "0.0.0.0", "--port", "8012"]

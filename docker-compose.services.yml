@@ -435,7 +435,7 @@ services:
     container_name: orca-webapp
     env_file: .env
     ports:
-      - "${WEBAPP_PORT:-5173}:80"
+      - "${WEBAPP_PORT:-5173}:8080"
     depends_on:
       - api-router
     restart: unless-stopped

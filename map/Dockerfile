@@ -13,5 +13,6 @@ RUN npm install --omit=dev
 
 COPY . .
 
+USER 10001
 EXPOSE 4010
 CMD ["node", "src/server.js"]

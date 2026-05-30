@@ -15,4 +15,5 @@ RUN pip install --no-cache-dir "jax[cpu]>=0.4.30" fastapi==0.115.2 uvicorn[stand
 COPY gpuops /app/gpuops
 COPY robot /app/robot
 
+USER 10001
 ENTRYPOINT ["uvicorn", "robot.service:app", "--host", "0.0.0.0", "--port", "8016"]
