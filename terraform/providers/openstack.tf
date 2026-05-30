@@ -6,11 +6,6 @@ terraform {
       source  = "terraform-provider-openstack/openstack"
       version = "~> 2.1"
     }
-
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.31"
-    }
   }
 }
 

@@ -1,25 +1,48 @@
-module "platform" {
-  source = "./providers"
+terraform {
+  required_version = ">= 1.5.0"
 
-  openstack_enabled             = var.openstack_enabled
-  openstack_cloud               = var.openstack_cloud
-  openstack_auth_url            = var.openstack_auth_url
-  openstack_region              = var.openstack_region
-  openstack_project_name        = var.openstack_project_name
-  openstack_username            = var.openstack_username
-  openstack_password            = var.openstack_password
-  openstack_user_domain_name    = var.openstack_user_domain_name
-  openstack_project_domain_name = var.openstack_project_domain_name
-  openstack_network             = var.openstack_network
-  openstack_compute             = var.openstack_compute
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.31"
+    }
+  }
+}
 
-  kubernetes_enabled                = var.kubernetes_enabled
-  kubeconfig_path                   = var.kubeconfig_path
-  kubeconfig_context                = var.kubeconfig_context
-  kubernetes_host                   = var.kubernetes_host
-  kubernetes_token                  = var.kubernetes_token
-  kubernetes_cluster_ca_certificate = var.kubernetes_cluster_ca_certificate
-  namespaces                        = var.namespaces
-  orca_namespace                    = var.orca_namespace
-  orca_workloads                    = var.orca_workloads
+provider "kubernetes" {
+  config_path    = var.kubeconfig_path != "" ? pathexpand(var.kubeconfig_path) : null
+  config_context = var.kubeconfig_context != "" ? var.kubeconfig_context : null
+
+  host                   = var.kubernetes_host != "" ? var.kubernetes_host : null
+  token                  = var.kubernetes_token != "" ? var.kubernetes_token : null
+  cluster_ca_certificate = var.kubernetes_cluster_ca_certificate != "" ? base64decode(var.kubernetes_cluster_ca_certificate) : null
+}
+
+locals {
+  namespace_set = distinct(concat(var.namespaces, [var.orca_namespace]))
+}
+
+module "k8s_namespaces" {
+  source = "./modules/k8s-namespaces"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  enabled    = var.kubernetes_enabled
+  namespaces = local.namespace_set
+}
+
+module "k8s_services" {
+  source = "./modules/k8s-services"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  enabled   = var.kubernetes_enabled
+  namespace = var.orca_namespace
+  workloads = var.orca_workloads
+
+  depends_on = [module.k8s_namespaces]
 }

@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"openstack_compute","Source":"../modules/openstack-compute","Dir":"../modules/openstack-compute"},{"Key":"openstack_network","Source":"../modules/openstack-network","Dir":"../modules/openstack-network"}]}
